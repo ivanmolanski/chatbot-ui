@@ -1,13 +1,16 @@
-import { Tables } from "@/supabase/types"
+/**
+ * Prompt Builder — Per ARCHITECTURE.md Phase 12.
+ * Zero Supabase types. Builds prompts from plain data structures.
+ * Provider-specific adaptation (Gemini, etc.) delegated to control plane.
+ */
+
 import { ChatPayload, MessageImage } from "@/types"
-import { encode } from "gpt-tokenizer"
-import { getBase64FromDataURL, getMediaTypeFromDataURL } from "@/lib/utils"
 
 const buildBasePrompt = (
   prompt: string,
   profileContext: string,
   workspaceInstructions: string,
-  assistant: Tables<"assistants"> | null
+  assistant: any | null
 ) => {
   let fullPrompt = ""
 
@@ -30,9 +33,17 @@ const buildBasePrompt = (
   return fullPrompt
 }
 
+function buildRetrievalText(fileItems: any[]) {
+  const retrievalText = fileItems
+    .map(item => `<BEGIN SOURCE>\n${item.content}\n</END SOURCE>`)
+    .join("\n\n")
+
+  return `You may use the following sources if needed to answer the user's question. If you don't know the answer, say "I don't know."\n\n${retrievalText}`
+}
+
 export async function buildFinalMessages(
   payload: ChatPayload,
-  profile: Tables<"profiles">,
+  profile: any,
   chatImages: MessageImage[]
 ) {
   const {
@@ -51,15 +62,16 @@ export async function buildFinalMessages(
     assistant
   )
 
+  // Estimate token count: ~4 chars per token as approximation
   const CHUNK_SIZE = chatSettings.contextLength
-  const PROMPT_TOKENS = encode(chatSettings.prompt).length
+  const PROMPT_TOKENS = Math.ceil(chatSettings.prompt.length / 4)
 
   let remainingTokens = CHUNK_SIZE - PROMPT_TOKENS
 
   let usedTokens = 0
   usedTokens += PROMPT_TOKENS
 
-  const processedChatMessages = chatMessages.map((chatMessage, index) => {
+  const processedChatMessages = chatMessages.map((chatMessage: any, index: number) => {
     const nextChatMessage = chatMessages[index + 1]
 
     if (nextChatMessage === undefined) {
@@ -70,10 +82,10 @@ export async function buildFinalMessages(
 
     if (nextChatMessageFileItems.length > 0) {
       const findFileItems = nextChatMessageFileItems
-        .map(fileItemId =>
-          chatFileItems.find(chatFileItem => chatFileItem.id === fileItemId)
+        .map((fileItemId: string) =>
+          chatFileItems.find((chatFileItem: any) => chatFileItem.id === fileItemId)
         )
-        .filter(item => item !== undefined) as Tables<"file_items">[]
+        .filter((item: any) => item !== undefined)
 
       const retrievalText = buildRetrievalText(findFileItems)
 
@@ -94,7 +106,7 @@ export async function buildFinalMessages(
 
   for (let i = processedChatMessages.length - 1; i >= 0; i--) {
     const message = processedChatMessages[i].message
-    const messageTokens = encode(message.content).length
+    const messageTokens = Math.ceil(message.content.length / 4)
 
     if (messageTokens <= remainingTokens) {
       remainingTokens -= messageTokens
@@ -105,7 +117,7 @@ export async function buildFinalMessages(
     }
   }
 
-  let tempSystemMessage: Tables<"messages"> = {
+  let tempSystemMessage: any = {
     chat_id: "",
     assistant_id: null,
     content: BUILT_PROMPT,
@@ -121,7 +133,7 @@ export async function buildFinalMessages(
 
   finalMessages.unshift(tempSystemMessage)
 
-  finalMessages = finalMessages.map(message => {
+  finalMessages = finalMessages.map((message: any) => {
     let content
 
     if (message.image_paths.length > 0) {
@@ -130,7 +142,7 @@ export async function buildFinalMessages(
           type: "text",
           text: message.content
         },
-        ...message.image_paths.map(path => {
+        ...message.image_paths.map((path: string) => {
           let formedUrl = ""
 
           if (path.startsWith("data")) {
@@ -173,86 +185,4 @@ export async function buildFinalMessages(
   }
 
   return finalMessages
-}
-
-function buildRetrievalText(fileItems: Tables<"file_items">[]) {
-  const retrievalText = fileItems
-    .map(item => `<BEGIN SOURCE>\n${item.content}\n</END SOURCE>`)
-    .join("\n\n")
-
-  return `You may use the following sources if needed to answer the user's question. If you don't know the answer, say "I don't know."\n\n${retrievalText}`
-}
-
-function adaptSingleMessageForGoogleGemini(message: any) {
-  let adaptedParts = []
-
-  let rawParts = []
-  if (!Array.isArray(message.content)) {
-    rawParts.push({ type: "text", text: message.content })
-  } else {
-    rawParts = message.content
-  }
-
-  for (let i = 0; i < rawParts.length; i++) {
-    let rawPart = rawParts[i]
-
-    if (rawPart.type == "text") {
-      adaptedParts.push({ text: rawPart.text })
-    } else if (rawPart.type === "image_url") {
-      adaptedParts.push({
-        inlineData: {
-          data: getBase64FromDataURL(rawPart.image_url.url),
-          mimeType: getMediaTypeFromDataURL(rawPart.image_url.url)
-        }
-      })
-    }
-  }
-
-  let role = "user"
-  if (["user", "system"].includes(message.role)) {
-    role = "user"
-  } else if (message.role === "assistant") {
-    role = "model"
-  }
-
-  return {
-    role: role,
-    parts: adaptedParts
-  }
-}
-
-function adaptMessagesForGeminiVision(messages: any[]) {
-  // Gemini Pro Vision cannot process multiple messages
-  // Reformat, using all texts and last visual only
-
-  const basePrompt = messages[0].parts[0].text
-  const baseRole = messages[0].role
-  const lastMessage = messages[messages.length - 1]
-  const visualMessageParts = lastMessage.parts
-  let visualQueryMessages = [
-    {
-      role: "user",
-      parts: [
-        `${baseRole}:\n${basePrompt}\n\nuser:\n${visualMessageParts[0].text}\n\n`,
-        visualMessageParts.slice(1)
-      ]
-    }
-  ]
-  return visualQueryMessages
-}
-
-export async function adaptMessagesForGoogleGemini(
-  payload: ChatPayload,
-  messages: any[]
-) {
-  let geminiMessages = []
-  for (let i = 0; i < messages.length; i++) {
-    let adaptedMessage = adaptSingleMessageForGoogleGemini(messages[i])
-    geminiMessages.push(adaptedMessage)
-  }
-
-  if (payload.chatSettings.model === "gemini-pro-vision") {
-    geminiMessages = adaptMessagesForGeminiVision(geminiMessages)
-  }
-  return geminiMessages
 }
