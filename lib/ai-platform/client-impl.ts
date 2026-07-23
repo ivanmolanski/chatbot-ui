@@ -6,7 +6,7 @@
  */
 
 import type { AIPlatformClient, ExecuteParams } from "./client"
-import type { Transport } from "./transport/types"
+import type { Transport, ResponseWithHeaders } from "./transport/types"
 import type { BackendAdapter } from "./adapters/types"
 import type {
   Execution,
@@ -84,11 +84,12 @@ export class AIPlatformClientImpl implements AIPlatformClient {
     id: ConversationId,
     title: string
   ): Promise<Conversation> {
-    return this.transport.request<Conversation>({
+    const result = await this.transport.request<Conversation>({
       method: "PUT",
       path: `/api/v1/conversations/${id}`,
       body: { title }
     })
+    return result.data
   }
 
   async deleteConversation(id: ConversationId): Promise<void> {
@@ -139,7 +140,10 @@ export class AIPlatformClientImpl implements AIPlatformClient {
   async healthCheck(): Promise<{ status: "ok" | "error"; latency?: number }> {
     const start = Date.now()
     try {
-      await this.transport.request({ method: "GET", path: "/api/v1/health" })
+      const result = await this.transport.request({
+        method: "GET",
+        path: "/api/v1/health"
+      })
       return { status: "ok", latency: Date.now() - start }
     } catch {
       return { status: "error", latency: Date.now() - start }

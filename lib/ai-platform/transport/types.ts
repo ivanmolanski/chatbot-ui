@@ -5,11 +5,18 @@
  * This enables swapping HTTP for WebSocket, gRPC, or mock transports.
  */
 
+export interface ResponseWithHeaders<T> {
+  data: T
+  headers: Headers
+}
+
 export interface Transport {
   /**
-   * Send a request and get a response.
+   * Send a request and get a response with headers.
+   * The canonical representation is response headers; there is no
+   * VersionedResponse<T> wrapper — callers inspect the headers.
    */
-  request<T>(params: RequestParams): Promise<T>
+  request<T>(params: RequestParams): Promise<ResponseWithHeaders<T>>
 
   /**
    * Send a request and get a streaming response.

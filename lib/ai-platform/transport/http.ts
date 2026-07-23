@@ -5,7 +5,12 @@
  * The client never calls fetch() directly — it uses this transport.
  */
 
-import type { Transport, RequestParams, StreamChunk } from "./types"
+import type {
+  Transport,
+  RequestParams,
+  StreamChunk,
+  ResponseWithHeaders
+} from "./types"
 
 export class HTTPTransport implements Transport {
   private baseUrl: string
@@ -16,7 +21,7 @@ export class HTTPTransport implements Transport {
     this.headers = headers
   }
 
-  async request<T>(params: RequestParams): Promise<T> {
+  async request<T>(params: RequestParams): Promise<ResponseWithHeaders<T>> {
     const url = this.buildUrl(params)
     const response = await fetch(url, {
       method: params.method,
@@ -36,7 +41,8 @@ export class HTTPTransport implements Transport {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
-    return response.json() as Promise<T>
+    const data = (await response.json()) as T
+    return { data, headers: response.headers }
   }
 
   async *stream(params: RequestParams): AsyncIterable<StreamChunk> {

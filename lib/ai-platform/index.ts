@@ -59,7 +59,7 @@ export type { Job, JobStatus, JobHandle } from "./jobs/types"
 export { ReconnectableStream } from "./jobs/reconnection"
 
 // Protocol
-export type { ProtocolVersions, VersionedResponse } from "./protocol/types"
+export type { ProtocolVersions } from "./protocol/types"
 
 // Config
 export type { AIPlatformConfig } from "./config"
