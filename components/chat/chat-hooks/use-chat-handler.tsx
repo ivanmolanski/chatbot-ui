@@ -1,36 +1,20 @@
+/**
+ * Chat Handler — Uses AIPlatformClient for all execution.
+ * Replaces the old handler that was coupled to Supabase, DB, and LLM providers.
+ * Per ARCHITECTURE.md Phase 2: execute() is the single entry point.
+ */
+
 import { ChatbotUIContext } from "@/context/context"
-import { getAssistantCollectionsByAssistantId } from "@/db/assistant-collections"
-import { getAssistantFilesByAssistantId } from "@/db/assistant-files"
-import { getAssistantToolsByAssistantId } from "@/db/assistant-tools"
-import { updateChat } from "@/db/chats"
-import { getCollectionFilesByCollectionId } from "@/db/collection-files"
-import { deleteMessagesIncludingAndAfter } from "@/db/messages"
-import { buildFinalMessages } from "@/lib/build-prompt"
-import { Tables } from "@/supabase/types"
-import { ChatMessage, ChatPayload, LLMID, ModelProvider } from "@/types"
+import { ChatMessage } from "@/types"
 import { useRouter } from "next/navigation"
 import { useContext, useEffect, useRef } from "react"
-import { LLM_LIST } from "../../../lib/models/llm/llm-list"
-import {
-  createTempMessages,
-  handleCreateChat,
-  handleCreateMessages,
-  handleHostedChat,
-  handleLocalChat,
-  handleRetrieval,
-  processResponse,
-  validateChatSettings
-} from "../chat-helpers"
 
 export const useChatHandler = () => {
   const router = useRouter()
 
   const {
     userInput,
-    chatFiles,
     setUserInput,
-    setNewMessageImages,
-    profile,
     setIsGenerating,
     setChatMessages,
     setFirstTokenReceived,
@@ -39,8 +23,6 @@ export const useChatHandler = () => {
     setSelectedChat,
     setChats,
     setSelectedTools,
-    availableLocalModels,
-    availableOpenRouterModels,
     abortController,
     setAbortController,
     chatSettings,
@@ -99,82 +81,6 @@ export const useChatHandler = () => {
     setSelectedTools([])
     setToolInUse("none")
 
-    if (selectedAssistant) {
-      setChatSettings({
-        model: selectedAssistant.model as LLMID,
-        prompt: selectedAssistant.prompt,
-        temperature: selectedAssistant.temperature,
-        contextLength: selectedAssistant.context_length,
-        includeProfileContext: selectedAssistant.include_profile_context,
-        includeWorkspaceInstructions:
-          selectedAssistant.include_workspace_instructions,
-        embeddingsProvider: selectedAssistant.embeddings_provider as
-          | "openai"
-          | "local"
-      })
-
-      let allFiles = []
-
-      const assistantFiles = (
-        await getAssistantFilesByAssistantId(selectedAssistant.id)
-      ).files
-      allFiles = [...assistantFiles]
-      const assistantCollections = (
-        await getAssistantCollectionsByAssistantId(selectedAssistant.id)
-      ).collections
-      for (const collection of assistantCollections) {
-        const collectionFiles = (
-          await getCollectionFilesByCollectionId(collection.id)
-        ).files
-        allFiles = [...allFiles, ...collectionFiles]
-      }
-      const assistantTools = (
-        await getAssistantToolsByAssistantId(selectedAssistant.id)
-      ).tools
-
-      setSelectedTools(assistantTools)
-      setChatFiles(
-        allFiles.map(file => ({
-          id: file.id,
-          name: file.name,
-          type: file.type,
-          file: null
-        }))
-      )
-
-      if (allFiles.length > 0) setShowFilesDisplay(true)
-    } else if (selectedPreset) {
-      setChatSettings({
-        model: selectedPreset.model as LLMID,
-        prompt: selectedPreset.prompt,
-        temperature: selectedPreset.temperature,
-        contextLength: selectedPreset.context_length,
-        includeProfileContext: selectedPreset.include_profile_context,
-        includeWorkspaceInstructions:
-          selectedPreset.include_workspace_instructions,
-        embeddingsProvider: selectedPreset.embeddings_provider as
-          | "openai"
-          | "local"
-      })
-    } else if (selectedWorkspace) {
-      // setChatSettings({
-      //   model: (selectedWorkspace.default_model ||
-      //     "gpt-4-1106-preview") as LLMID,
-      //   prompt:
-      //     selectedWorkspace.default_prompt ||
-      //     "You are a friendly, helpful AI assistant.",
-      //   temperature: selectedWorkspace.default_temperature || 0.5,
-      //   contextLength: selectedWorkspace.default_context_length || 4096,
-      //   includeProfileContext:
-      //     selectedWorkspace.include_profile_context || true,
-      //   includeWorkspaceInstructions:
-      //     selectedWorkspace.include_workspace_instructions || true,
-      //   embeddingsProvider:
-      //     (selectedWorkspace.embeddings_provider as "openai" | "local") ||
-      //     "openai"
-      // })
-    }
-
     return router.push(`/${selectedWorkspace.id}/chat`)
   }
 
@@ -205,184 +111,87 @@ export const useChatHandler = () => {
       const newAbortController = new AbortController()
       setAbortController(newAbortController)
 
-      const modelData = [
-        ...models.map(model => ({
-          modelId: model.model_id as LLMID,
-          modelName: model.name,
-          provider: "custom" as ModelProvider,
-          hostedId: model.id,
-          platformLink: "",
-          imageInput: false
-        })),
-        ...LLM_LIST,
-        ...availableLocalModels,
-        ...availableOpenRouterModels
-      ].find(llm => llm.modelId === chatSettings?.model)
+      // Per ARCHITECTURE.md Phase 2: execute() is the single entry point
+      // The AIPlatformClient handles all execution types
+      // For now, use the proxy route which forwards to the control plane
+      const response = await fetch("/api/v1/execute", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream"
+        },
+        body: JSON.stringify({
+          type: "chat",
+          input: { content: messageContent },
+          config: chatSettings || {}
+        }),
+        signal: newAbortController.signal
+      })
 
-      validateChatSettings(
-        chatSettings,
-        modelData,
-        profile,
-        selectedWorkspace,
-        messageContent
-      )
-
-      let currentChat = selectedChat ? { ...selectedChat } : null
-
-      const b64Images = newMessageImages.map(image => image.base64)
-
-      let retrievedFileItems: Tables<"file_items">[] = []
-
-      if (
-        (newMessageFiles.length > 0 || chatFiles.length > 0) &&
-        useRetrieval
-      ) {
-        setToolInUse("retrieval")
-
-        retrievedFileItems = await handleRetrieval(
-          userInput,
-          newMessageFiles,
-          chatFiles,
-          chatSettings!.embeddingsProvider,
-          sourceCount
-        )
+      if (!response.ok) {
+        throw new Error(`Execution failed: ${response.statusText}`)
       }
 
-      const { tempUserChatMessage, tempAssistantChatMessage } =
-        createTempMessages(
-          messageContent,
-          chatMessages,
-          chatSettings!,
-          b64Images,
-          isRegeneration,
-          setChatMessages,
-          selectedAssistant
-        )
+      // Stream the response
+      if (response.body) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let fullText = ""
 
-      let payload: ChatPayload = {
-        chatSettings: chatSettings!,
-        workspaceInstructions: selectedWorkspace!.instructions || "",
-        chatMessages: isRegeneration
-          ? [...chatMessages]
-          : [...chatMessages, tempUserChatMessage],
-        assistant: selectedChat?.assistant_id ? selectedAssistant : null,
-        messageFileItems: retrievedFileItems,
-        chatFileItems: chatFileItems
-      }
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
 
-      let generatedText = ""
+          const chunk = decoder.decode(value, { stream: true })
+          fullText += chunk
 
-      if (selectedTools.length > 0) {
-        setToolInUse("Tools")
+          setFirstTokenReceived(true)
 
-        const formattedMessages = await buildFinalMessages(
-          payload,
-          profile!,
-          chatImages
-        )
+          // Update the assistant message in real-time
+          setChatMessages(prev => {
+            const messages = [...prev]
+            const lastMsg = messages[messages.length - 1]
 
-        const response = await fetch("/api/chat/tools", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            chatSettings: payload.chatSettings,
-            messages: formattedMessages,
-            selectedTools
+            if (lastMsg?.message.role === "assistant") {
+              messages[messages.length - 1] = {
+                ...lastMsg,
+                message: {
+                  ...lastMsg.message,
+                  content: fullText
+                }
+              }
+            } else {
+              messages.push({
+                message: {
+                  chat_id: selectedChat?.id || "",
+                  assistant_id: null,
+                  content: fullText,
+                  created_at: new Date().toISOString(),
+                  id: `msg_${Date.now()}`,
+                  image_paths: [],
+                  model: chatSettings?.model || "",
+                  role: "assistant",
+                  sequence_number: messages.length,
+                  updated_at: new Date().toISOString(),
+                  user_id: ""
+                },
+                fileItems: []
+              })
+            }
+
+            return messages
           })
-        })
-
-        setToolInUse("none")
-
-        generatedText = await processResponse(
-          response,
-          isRegeneration
-            ? payload.chatMessages[payload.chatMessages.length - 1]
-            : tempAssistantChatMessage,
-          true,
-          newAbortController,
-          setFirstTokenReceived,
-          setChatMessages,
-          setToolInUse
-        )
-      } else {
-        if (modelData!.provider === "ollama") {
-          generatedText = await handleLocalChat(
-            payload,
-            profile!,
-            chatSettings!,
-            tempAssistantChatMessage,
-            isRegeneration,
-            newAbortController,
-            setIsGenerating,
-            setFirstTokenReceived,
-            setChatMessages,
-            setToolInUse
-          )
-        } else {
-          generatedText = await handleHostedChat(
-            payload,
-            profile!,
-            modelData!,
-            tempAssistantChatMessage,
-            isRegeneration,
-            newAbortController,
-            newMessageImages,
-            chatImages,
-            setIsGenerating,
-            setFirstTokenReceived,
-            setChatMessages,
-            setToolInUse
-          )
         }
       }
-
-      if (!currentChat) {
-        currentChat = await handleCreateChat(
-          chatSettings!,
-          profile!,
-          selectedWorkspace!,
-          messageContent,
-          selectedAssistant!,
-          newMessageFiles,
-          setSelectedChat,
-          setChats,
-          setChatFiles
-        )
-      } else {
-        const updatedChat = await updateChat(currentChat.id, {
-          updated_at: new Date().toISOString()
-        })
-
-        setChats(prevChats => {
-          const updatedChats = prevChats.map(prevChat =>
-            prevChat.id === updatedChat.id ? updatedChat : prevChat
-          )
-
-          return updatedChats
-        })
-      }
-
-      await handleCreateMessages(
-        chatMessages,
-        currentChat,
-        profile!,
-        modelData!,
-        messageContent,
-        generatedText,
-        newMessageImages,
-        isRegeneration,
-        retrievedFileItems,
-        setChatMessages,
-        setChatFileItems,
-        setChatImages,
-        selectedAssistant
-      )
 
       setIsGenerating(false)
       setFirstTokenReceived(false)
     } catch (error) {
+      if ((error as Error).name === "AbortError") {
+        // User cancelled
+      } else {
+        console.error("Send message error:", error)
+      }
       setIsGenerating(false)
       setFirstTokenReceived(false)
       setUserInput(startingInput)
@@ -393,14 +202,6 @@ export const useChatHandler = () => {
     editedContent: string,
     sequenceNumber: number
   ) => {
-    if (!selectedChat) return
-
-    await deleteMessagesIncludingAndAfter(
-      selectedChat.user_id,
-      selectedChat.id,
-      sequenceNumber
-    )
-
     const filteredMessages = chatMessages.filter(
       chatMessage => chatMessage.message.sequence_number < sequenceNumber
     )
@@ -412,7 +213,6 @@ export const useChatHandler = () => {
 
   return {
     chatInputRef,
-    prompt,
     handleNewChat,
     handleSendMessage,
     handleFocusChatInput,
