@@ -1,5 +1,4 @@
 import { ChatbotUIContext } from "@/context/context"
-import { Tables } from "@/supabase/types"
 import { IconBooks } from "@tabler/icons-react"
 import { FC, useContext, useEffect, useRef } from "react"
 import { FileIcon } from "../ui/file-icon"
@@ -10,8 +9,8 @@ interface FilePickerProps {
   onOpenChange: (isOpen: boolean) => void
   selectedFileIds: string[]
   selectedCollectionIds: string[]
-  onSelectFile: (file: Tables<"files">) => void
-  onSelectCollection: (collection: Tables<"collections">) => void
+  onSelectFile: (file: any) => void
+  onSelectCollection: (collection: any) => void
   isFocused: boolean
 }
 
@@ -37,13 +36,13 @@ export const FilePicker: FC<FilePickerProps> = ({
   }, [isFocused])
 
   const filteredFiles = files.filter(
-    file =>
+    (file: any) =>
       file.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
       !selectedFileIds.includes(file.id)
   )
 
   const filteredCollections = collections.filter(
-    collection =>
+    (collection: any) =>
       collection.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
       !selectedCollectionIds.includes(collection.id)
   )
@@ -52,12 +51,12 @@ export const FilePicker: FC<FilePickerProps> = ({
     onOpenChange(isOpen)
   }
 
-  const handleSelectFile = (file: Tables<"files">) => {
+  const handleSelectFile = (file: any) => {
     onSelectFile(file)
     handleOpenChange(false)
   }
 
-  const handleSelectCollection = (collection: Tables<"collections">) => {
+  const handleSelectCollection = (collection: any) => {
     onSelectCollection(collection)
     handleOpenChange(false)
   }
@@ -86,7 +85,6 @@ export const FilePicker: FC<FilePickerProps> = ({
         e.preventDefault()
         itemsRef.current[0]?.focus()
       } else if (e.key === "ArrowUp" && !e.shiftKey && index === 0) {
-        // go to last element if arrow up is pressed on first element
         e.preventDefault()
         itemsRef.current[itemsRef.current.length - 1]?.focus()
       } else if (e.key === "ArrowUp") {
@@ -121,7 +119,7 @@ export const FilePicker: FC<FilePickerProps> = ({
                   className="hover:bg-accent focus:bg-accent flex cursor-pointer items-center rounded p-2 focus:outline-none"
                   onClick={() => {
                     if ("type" in item) {
-                      handleSelectFile(item as Tables<"files">)
+                      handleSelectFile(item)
                     } else {
                       handleSelectCollection(item)
                     }
@@ -135,7 +133,7 @@ export const FilePicker: FC<FilePickerProps> = ({
                   }
                 >
                   {"type" in item ? (
-                    <FileIcon type={(item as Tables<"files">).type} size={32} />
+                    <FileIcon type={item.type} size={32} />
                   ) : (
                     <IconBooks size={32} />
                   )}
