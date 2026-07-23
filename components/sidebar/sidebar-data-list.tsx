@@ -1,14 +1,11 @@
+/**
+ * Sidebar Data List — Per ARCHITECTURE.md Phase 12.
+ * Zero DB, zero Supabase types. Uses context state only.
+ * CRUD operations delegated to control plane via proxy API.
+ */
+
 import { ChatbotUIContext } from "@/context/context"
-import { updateAssistant } from "@/db/assistants"
-import { updateChat } from "@/db/chats"
-import { updateCollection } from "@/db/collections"
-import { updateFile } from "@/db/files"
-import { updateModel } from "@/db/models"
-import { updatePreset } from "@/db/presets"
-import { updatePrompt } from "@/db/prompts"
-import { updateTool } from "@/db/tools"
 import { cn } from "@/lib/utils"
-import { Tables } from "@/supabase/types"
 import { ContentType, DataItemType, DataListType } from "@/types"
 import { FC, useContext, useEffect, useRef, useState } from "react"
 import { Separator } from "../ui/separator"
@@ -25,7 +22,7 @@ import { ToolItem } from "./items/tools/tool-item"
 interface SidebarDataListProps {
   contentType: ContentType
   data: DataListType
-  folders: Tables<"folders">[]
+  folders: any[]
 }
 
 export const SidebarDataList: FC<SidebarDataListProps> = ({
@@ -55,22 +52,22 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
   ) => {
     switch (contentType) {
       case "chats":
-        return <ChatItem key={item.id} chat={item as Tables<"chats">} />
+        return <ChatItem key={item.id} chat={item as any} />
 
       case "presets":
-        return <PresetItem key={item.id} preset={item as Tables<"presets">} />
+        return <PresetItem key={item.id} preset={item as any} />
 
       case "prompts":
-        return <PromptItem key={item.id} prompt={item as Tables<"prompts">} />
+        return <PromptItem key={item.id} prompt={item as any} />
 
       case "files":
-        return <FileItem key={item.id} file={item as Tables<"files">} />
+        return <FileItem key={item.id} file={item as any} />
 
       case "collections":
         return (
           <CollectionItem
             key={item.id}
-            collection={item as Tables<"collections">}
+            collection={item as any}
           />
         )
 
@@ -78,15 +75,15 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
         return (
           <AssistantItem
             key={item.id}
-            assistant={item as Tables<"assistants">}
+            assistant={item as any}
           />
         )
 
       case "tools":
-        return <ToolItem key={item.id} tool={item as Tables<"tools">} />
+        return <ToolItem key={item.id} tool={item as any} />
 
       case "models":
-        return <ModelItem key={item.id} model={item as Tables<"models">} />
+        return <ModelItem key={item.id} model={item as any} />
 
       default:
         return null
@@ -132,47 +129,38 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
       )
   }
 
-  const updateFunctions = {
-    chats: updateChat,
-    presets: updatePreset,
-    prompts: updatePrompt,
-    files: updateFile,
-    collections: updateCollection,
-    assistants: updateAssistant,
-    tools: updateTool,
-    models: updateModel
-  }
-
-  const stateUpdateFunctions = {
-    chats: setChats,
-    presets: setPresets,
-    prompts: setPrompts,
-    files: setFiles,
-    collections: setCollections,
-    assistants: setAssistants,
-    tools: setTools,
-    models: setModels
-  }
-
+  // Per ARCHITECTURE.md: CRUD operations delegated to control plane via proxy API
   const updateFolder = async (itemId: string, folderId: string | null) => {
-    const item: any = data.find(item => item.id === itemId)
+    try {
+      const response = await fetch(`/api/v1/${contentType}/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder_id: folderId })
+      })
+      if (response.ok) {
+        const updatedItem = await response.json()
+        const setStateFunction = {
+          chats: setChats,
+          presets: setPresets,
+          prompts: setPrompts,
+          files: setFiles,
+          collections: setCollections,
+          assistants: setAssistants,
+          tools: setTools,
+          models: setModels
+        }[contentType]
 
-    if (!item) return null
-
-    const updateFunction = updateFunctions[contentType]
-    const setStateFunction = stateUpdateFunctions[contentType]
-
-    if (!updateFunction || !setStateFunction) return
-
-    const updatedItem = await updateFunction(item.id, {
-      folder_id: folderId
-    })
-
-    setStateFunction((items: any) =>
-      items.map((item: any) =>
-        item.id === updatedItem.id ? updatedItem : item
-      )
-    )
+        if (setStateFunction) {
+          setStateFunction((items: any) =>
+            items.map((item: any) =>
+              item.id === updatedItem.id ? updatedItem : item
+            )
+          )
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to update ${contentType}:`, error)
+    }
   }
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -214,8 +202,8 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
     }
   }, [data])
 
-  const dataWithFolders = data.filter(item => item.folder_id)
-  const dataWithoutFolders = data.filter(item => item.folder_id === null)
+  const dataWithFolders = data.filter((item: any) => item.folder_id)
+  const dataWithoutFolders = data.filter((item: any) => item.folder_id === null)
 
   return (
     <>
@@ -238,7 +226,7 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
               isOverflowing ? "w-[calc(100%-8px)]" : "w-full"
             } space-y-2 pt-2 ${isOverflowing ? "mr-2" : ""}`}
           >
-            {folders.map(folder => (
+            {folders.map((folder: any) => (
               <Folder
                 key={folder.id}
                 folder={folder}
@@ -246,8 +234,8 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
                 contentType={contentType}
               >
                 {dataWithFolders
-                  .filter(item => item.folder_id === folder.id)
-                  .map(item => (
+                  .filter((item: any) => item.folder_id === folder.id)
+                  .map((item: any) => (
                     <div
                       key={item.id}
                       draggable
@@ -315,7 +303,7 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
               >
-                {dataWithoutFolders.map(item => {
+                {dataWithoutFolders.map((item: any) => {
                   return (
                     <div
                       key={item.id}
