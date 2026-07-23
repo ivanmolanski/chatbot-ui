@@ -1,5 +1,4 @@
 import { ChatbotUIContext } from "@/context/context"
-import { CHAT_SETTING_LIMITS } from "@/lib/chat-setting-limits"
 import useHotkey from "@/lib/hooks/use-hotkey"
 import { LLMID, ModelProvider } from "@/types"
 import { IconAdjustmentsHorizontal } from "@tabler/icons-react"
@@ -9,6 +8,10 @@ import { ChatSettingsForm } from "../ui/chat-settings-form"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 
 interface ChatSettingsProps {}
+
+// Default limits when no specific model config is available
+const DEFAULT_MAX_TEMPERATURE = 2.0
+const DEFAULT_MAX_CONTEXT_LENGTH = 128000
 
 export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
   useHotkey("i", () => handleClick())
@@ -33,15 +36,16 @@ export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
   useEffect(() => {
     if (!chatSettings) return
 
+    // Per ARCHITECTURE.md: model limits served by control plane capabilities
     setChatSettings({
       ...chatSettings,
       temperature: Math.min(
         chatSettings.temperature,
-        CHAT_SETTING_LIMITS[chatSettings.model]?.MAX_TEMPERATURE || 1
+        DEFAULT_MAX_TEMPERATURE
       ),
       contextLength: Math.min(
         chatSettings.contextLength,
-        CHAT_SETTING_LIMITS[chatSettings.model]?.MAX_CONTEXT_LENGTH || 4096
+        DEFAULT_MAX_CONTEXT_LENGTH
       )
     })
   }, [chatSettings?.model])
