@@ -1,5 +1,4 @@
 import { ChatbotUIContext } from "@/context/context"
-import { Tables } from "@/supabase/types"
 import { IconRobotFace } from "@tabler/icons-react"
 import Image from "next/image"
 import { FC, useContext, useEffect, useRef } from "react"
@@ -27,7 +26,7 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
     }
   }, [focusAssistant])
 
-  const filteredAssistants = assistants.filter(assistant =>
+  const filteredAssistants = assistants.filter((assistant: any) =>
     assistant.name.toLowerCase().includes(atCommand.toLowerCase())
   )
 
@@ -35,7 +34,7 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
     setIsAssistantPickerOpen(isOpen)
   }
 
-  const callSelectAssistant = (assistant: Tables<"assistants">) => {
+  const callSelectAssistant = (assistant: any) => {
     handleSelectAssistant(assistant)
     handleOpenChange(false)
   }
@@ -56,7 +55,6 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
         e.preventDefault()
         itemsRef.current[0]?.focus()
       } else if (e.key === "ArrowUp" && !e.shiftKey && index === 0) {
-        // go to last element if arrow up is pressed on first element
         e.preventDefault()
         itemsRef.current[itemsRef.current.length - 1]?.focus()
       } else if (e.key === "ArrowUp") {
@@ -81,7 +79,7 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
             </div>
           ) : (
             <>
-              {filteredAssistants.map((item, index) => (
+              {filteredAssistants.map((item: any, index: number) => (
                 <div
                   key={item.id}
                   ref={ref => {
@@ -89,9 +87,7 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
                   }}
                   tabIndex={0}
                   className="hover:bg-accent focus:bg-accent flex cursor-pointer items-center rounded p-2 focus:outline-none"
-                  onClick={() =>
-                    callSelectAssistant(item as Tables<"assistants">)
-                  }
+                  onClick={() => callSelectAssistant(item)}
                   onKeyDown={getKeyDownHandler(index)}
                 >
                   {item.image_path ? (
