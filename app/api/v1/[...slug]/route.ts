@@ -26,10 +26,16 @@ async function proxyRequest(
     "Content-Type",
     request.headers.get("Content-Type") || "application/json"
   )
+  const accept = request.headers.get("Accept") || ""
+  if (accept) headers.set("Accept", accept)
 
   // Forward protocol version headers
   const apiVersion = request.headers.get("X-API-Version")
   if (apiVersion) headers.set("X-API-Version", apiVersion)
+  const eventVersion = request.headers.get("X-Event-Version")
+  if (eventVersion) headers.set("X-Event-Version", eventVersion)
+  const schemaVersion = request.headers.get("X-Schema-Version")
+  if (schemaVersion) headers.set("X-Schema-Version", schemaVersion)
 
   const response = await fetch(fullUrl, {
     method,
@@ -38,8 +44,10 @@ async function proxyRequest(
       method !== "GET" && method !== "DELETE" ? await request.text() : undefined
   })
 
-  // Pass through streaming responses directly
-  if (request.headers.get("Accept") === "text/event-stream") {
+  // Pass through streaming responses directly — use includes() to handle
+  // Accept headers like "text/event-stream, text/plain" or "*/*"
+  const isSSE = accept.includes("text/event-stream")
+  if (isSSE) {
     return new Response(response.body, {
       status: response.status,
       headers: {
