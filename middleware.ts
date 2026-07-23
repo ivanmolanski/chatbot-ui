@@ -10,6 +10,10 @@ export async function middleware(request: NextRequest) {
   try {
     const { supabase, response } = createClient(request)
 
+    if (!supabase) {
+      return response
+    }
+
     const session = await supabase.auth.getSession()
 
     const redirectToChat = session && request.nextUrl.pathname === "/"
