@@ -1,19 +1,16 @@
-import { Tables } from "@/supabase/types"
+/**
+ * Model Fetcher — Per ARCHITECTURE.md Phase 12.
+ * Zero Supabase types. Model list derived from capabilities negotiation.
+ * Provider-specific model lists removed; models served by control plane.
+ */
+
 import { LLM, LLMID, OpenRouterLLM } from "@/types"
-import { toast } from "sonner"
-import { LLM_LIST_MAP } from "./llm/llm-list"
 
-export const fetchHostedModels = async (profile: Tables<"profiles">) => {
+export const fetchHostedModels = async () => {
   try {
-    const providers = ["google", "anthropic", "mistral", "groq", "perplexity"]
-
-    if (profile.use_azure_openai) {
-      providers.push("azure")
-    } else {
-      providers.push("openai")
-    }
-
-    const response = await fetch("/api/keys")
+    // Per ARCHITECTURE.md: Capabilities determine available models
+    // Control plane advertises which models are available
+    const response = await fetch("/api/v1/capabilities")
 
     if (!response.ok) {
       throw new Error(`Server is not responding.`)
@@ -21,30 +18,17 @@ export const fetchHostedModels = async (profile: Tables<"profiles">) => {
 
     const data = await response.json()
 
-    let modelsToAdd: LLM[] = []
-
-    for (const provider of providers) {
-      let providerKey: keyof typeof profile
-
-      if (provider === "google") {
-        providerKey = "google_gemini_api_key"
-      } else if (provider === "azure") {
-        providerKey = "azure_openai_api_key"
-      } else {
-        providerKey = `${provider}_api_key` as keyof typeof profile
-      }
-
-      if (profile?.[providerKey] || data.isUsingEnvKeyMap[provider]) {
-        const models = LLM_LIST_MAP[provider]
-
-        if (Array.isArray(models)) {
-          modelsToAdd.push(...models)
-        }
-      }
-    }
+    const modelsToAdd: LLM[] = (data.models || []).map((m: any) => ({
+      modelId: m.model_id as LLMID,
+      modelName: m.model_name || m.model_id,
+      provider: m.provider || "openai",
+      hostedId: m.hosted_id || m.model_id,
+      platformLink: m.platform_link || "",
+      imageInput: m.image_input || false
+    }))
 
     return {
-      envKeyMap: data.isUsingEnvKeyMap,
+      envKeyMap: data.envKeyMap || {},
       hostedModels: modelsToAdd
     }
   } catch (error) {
@@ -108,6 +92,5 @@ export const fetchOpenRouterModels = async () => {
     return openRouterModels
   } catch (error) {
     console.error("Error fetching Open Router models: " + error)
-    toast.error("Error fetching Open Router models: " + error)
   }
 }
