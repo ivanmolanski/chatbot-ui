@@ -1,5 +1,4 @@
 import { ChatbotUIContext } from "@/context/context"
-import { Tables } from "@/supabase/types"
 import { FC, useContext, useEffect, useRef, useState } from "react"
 import { Button } from "../ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog"
@@ -39,7 +38,7 @@ export const PromptPicker: FC<PromptPickerProps> = ({}) => {
 
   const [isTyping, setIsTyping] = useState(false)
 
-  const filteredPrompts = prompts.filter(prompt =>
+  const filteredPrompts = prompts.filter((prompt: any) =>
     prompt.name.toLowerCase().includes(slashCommand.toLowerCase())
   )
 
@@ -47,12 +46,12 @@ export const PromptPicker: FC<PromptPickerProps> = ({}) => {
     setIsPromptPickerOpen(isOpen)
   }
 
-  const callSelectPrompt = (prompt: Tables<"prompts">) => {
+  const callSelectPrompt = (prompt: any) => {
     const regex = /\{\{.*?\}\}/g
     const matches = prompt.content.match(regex)
 
     if (matches) {
-      const newPromptVariables = matches.map(match => ({
+      const newPromptVariables = matches.map((match: string) => ({
         promptId: prompt.id,
         name: match.replace(/\{\{|\}\}/g, ""),
         value: ""
@@ -82,7 +81,6 @@ export const PromptPicker: FC<PromptPickerProps> = ({}) => {
         e.preventDefault()
         itemsRef.current[0]?.focus()
       } else if (e.key === "ArrowUp" && !e.shiftKey && index === 0) {
-        // go to last element if arrow up is pressed on first element
         e.preventDefault()
         itemsRef.current[itemsRef.current.length - 1]?.focus()
       } else if (e.key === "ArrowUp") {
@@ -104,12 +102,12 @@ export const PromptPicker: FC<PromptPickerProps> = ({}) => {
           new RegExp(`\\{\\{${variable.name}\\}\\}`, "g"),
           variable.value
         ),
-      prompts.find(prompt => prompt.id === promptVariables[0].promptId)
+      prompts.find((prompt: any) => prompt.id === promptVariables[0].promptId)
         ?.content || ""
     )
 
     const newPrompt: any = {
-      ...prompts.find(prompt => prompt.id === promptVariables[0].promptId),
+      ...prompts.find((prompt: any) => prompt.id === promptVariables[0].promptId),
       content: newPromptContent
     }
 
@@ -189,7 +187,7 @@ export const PromptPicker: FC<PromptPickerProps> = ({}) => {
               No matching prompts.
             </div>
           ) : (
-            filteredPrompts.map((prompt, index) => (
+            filteredPrompts.map((prompt: any, index: number) => (
               <div
                 key={prompt.id}
                 ref={ref => {
