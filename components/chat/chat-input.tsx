@@ -1,6 +1,5 @@
 import { ChatbotUIContext } from "@/context/context"
 import useHotkey from "@/lib/hooks/use-hotkey"
-import { LLM_LIST } from "@/lib/models/llm/llm-list"
 import { cn } from "@/lib/utils"
 import {
   IconBolt,
@@ -142,9 +141,15 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
   }
 
   const handlePaste = (event: React.ClipboardEvent) => {
-    const imagesAllowed = LLM_LIST.find(
-      llm => llm.modelId === chatSettings?.model
-    )?.imageInput
+    // Per ARCHITECTURE.md: model capabilities served by control plane
+    // Check if model supports images by name convention
+    const model = chatSettings?.model || ""
+    const imagesAllowed =
+      model.includes("vision") ||
+      model.includes("gpt-4o") ||
+      model.includes("gemini-pro-vision") ||
+      model.includes("claude-3") ||
+      model.includes("llava")
 
     const items = event.clipboardData.items
     for (const item of items) {
