@@ -1,5 +1,3 @@
-import { LLM_LIST } from "@/lib/models/llm/llm-list"
-import { Tables } from "@/supabase/types"
 import { IconCircleCheckFilled, IconRobotFace } from "@tabler/icons-react"
 import Image from "next/image"
 import { FC } from "react"
@@ -9,7 +7,7 @@ import { DropdownMenuItem } from "../ui/dropdown-menu"
 interface QuickSettingOptionProps {
   contentType: "presets" | "assistants"
   isSelected: boolean
-  item: Tables<"presets"> | Tables<"assistants">
+  item: any
   onSelect: () => void
   image: string
 }
@@ -21,7 +19,7 @@ export const QuickSettingOption: FC<QuickSettingOptionProps> = ({
   onSelect,
   image
 }) => {
-  const modelDetails = LLM_LIST.find(model => model.modelId === item.model)
+  const provider = item.model?.split("-")[0] || "custom"
 
   return (
     <DropdownMenuItem
@@ -32,7 +30,7 @@ export const QuickSettingOption: FC<QuickSettingOptionProps> = ({
       <div className="w-[32px]">
         {contentType === "presets" ? (
           <ModelIcon
-            provider={modelDetails?.provider || "custom"}
+            provider={provider}
             width={32}
             height={32}
           />
