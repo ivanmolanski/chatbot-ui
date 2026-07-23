@@ -1,15 +1,8 @@
 import Loading from "@/app/[locale]/loading"
 import { useChatHandler } from "@/components/chat/chat-hooks/use-chat-handler"
 import { ChatbotUIContext } from "@/context/context"
-import { getAssistantToolsByAssistantId } from "@/db/assistant-tools"
-import { getChatFilesByChatId } from "@/db/chat-files"
-import { getChatById } from "@/db/chats"
-import { getMessageFileItemsByMessageId } from "@/db/message-file-items"
-import { getMessagesByChatId } from "@/db/messages"
-import { getMessageImageFromStorage } from "@/db/storage/message-images"
-import { convertBlobToBase64 } from "@/lib/blob-to-b64"
 import useHotkey from "@/lib/hooks/use-hotkey"
-import { LLMID, MessageImage } from "@/types"
+import { LLMID } from "@/types"
 import { useParams } from "next/navigation"
 import { FC, useContext, useEffect, useState } from "react"
 import { ChatHelp } from "./chat-help"
@@ -59,8 +52,35 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      await fetchMessages()
-      await fetchChat()
+      // Per ARCHITECTURE.md: message/chat fetching delegated to control plane
+      setChatMessages([])
+      setChatFileItems([])
+      setChatFiles([])
+      setChatImages([])
+
+      if (params.chatid) {
+        try {
+          const response = await fetch(`/api/v1/conversations/${params.chatid}`)
+          if (response.ok) {
+            const conversation = await response.json()
+            setSelectedChat(conversation)
+
+            if (conversation.settings) {
+              setChatSettings({
+                model: (conversation.settings.model || "gpt-4-turbo-preview") as LLMID,
+                prompt: conversation.settings.prompt || "You are a helpful AI assistant.",
+                temperature: conversation.settings.temperature ?? 0.5,
+                contextLength: conversation.settings.context_length ?? 4000,
+                includeProfileContext: conversation.settings.include_profile_context ?? true,
+                includeWorkspaceInstructions: conversation.settings.include_workspace_instructions ?? true,
+                embeddingsProvider: (conversation.settings.embeddings_provider || "openai") as "openai" | "local"
+              })
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch conversation:", error)
+        }
+      }
 
       scrollToBottom()
       setIsAtBottom(true)
@@ -75,111 +95,6 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
       setLoading(false)
     }
   }, [])
-
-  const fetchMessages = async () => {
-    const fetchedMessages = await getMessagesByChatId(params.chatid as string)
-
-    const imagePromises: Promise<MessageImage>[] = fetchedMessages.flatMap(
-      message =>
-        message.image_paths
-          ? message.image_paths.map(async imagePath => {
-              const url = await getMessageImageFromStorage(imagePath)
-
-              if (url) {
-                const response = await fetch(url)
-                const blob = await response.blob()
-                const base64 = await convertBlobToBase64(blob)
-
-                return {
-                  messageId: message.id,
-                  path: imagePath,
-                  base64,
-                  url,
-                  file: null
-                }
-              }
-
-              return {
-                messageId: message.id,
-                path: imagePath,
-                base64: "",
-                url,
-                file: null
-              }
-            })
-          : []
-    )
-
-    const images: MessageImage[] = await Promise.all(imagePromises.flat())
-    setChatImages(images)
-
-    const messageFileItemPromises = fetchedMessages.map(
-      async message => await getMessageFileItemsByMessageId(message.id)
-    )
-
-    const messageFileItems = await Promise.all(messageFileItemPromises)
-
-    const uniqueFileItems = messageFileItems.flatMap(item => item.file_items)
-    setChatFileItems(uniqueFileItems)
-
-    const chatFiles = await getChatFilesByChatId(params.chatid as string)
-
-    setChatFiles(
-      chatFiles.files.map(file => ({
-        id: file.id,
-        name: file.name,
-        type: file.type,
-        file: null
-      }))
-    )
-
-    setUseRetrieval(true)
-    setShowFilesDisplay(true)
-
-    const fetchedChatMessages = fetchedMessages.map(message => {
-      return {
-        message,
-        fileItems: messageFileItems
-          .filter(messageFileItem => messageFileItem.id === message.id)
-          .flatMap(messageFileItem =>
-            messageFileItem.file_items.map(fileItem => fileItem.id)
-          )
-      }
-    })
-
-    setChatMessages(fetchedChatMessages)
-  }
-
-  const fetchChat = async () => {
-    const chat = await getChatById(params.chatid as string)
-    if (!chat) return
-
-    if (chat.assistant_id) {
-      const assistant = assistants.find(
-        assistant => assistant.id === chat.assistant_id
-      )
-
-      if (assistant) {
-        setSelectedAssistant(assistant)
-
-        const assistantTools = (
-          await getAssistantToolsByAssistantId(assistant.id)
-        ).tools
-        setSelectedTools(assistantTools)
-      }
-    }
-
-    setSelectedChat(chat)
-    setChatSettings({
-      model: chat.model as LLMID,
-      prompt: chat.prompt,
-      temperature: chat.temperature,
-      contextLength: chat.context_length,
-      includeProfileContext: chat.include_profile_context,
-      includeWorkspaceInstructions: chat.include_workspace_instructions,
-      embeddingsProvider: chat.embeddings_provider as "openai" | "local"
-    })
-  }
 
   if (loading) {
     return <Loading />
