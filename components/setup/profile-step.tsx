@@ -1,11 +1,6 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  PROFILE_DISPLAY_NAME_MAX,
-  PROFILE_USERNAME_MAX,
-  PROFILE_USERNAME_MIN
-} from "@/db/limits"
-import {
   IconCircleCheckFilled,
   IconCircleXFilled,
   IconLoader2
@@ -22,6 +17,10 @@ interface ProfileStepProps {
   onUsernameChange: (username: string) => void
   onDisplayNameChange: (name: string) => void
 }
+
+const PROFILE_USERNAME_MIN = 3
+const PROFILE_USERNAME_MAX = 50
+const PROFILE_DISPLAY_NAME_MAX = 100
 
 export const ProfileStep: FC<ProfileStepProps> = ({
   username,
