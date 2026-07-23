@@ -1,9 +1,9 @@
+/**
+ * Prompt and Command Handler — Per ARCHITECTURE.md Phase 12.
+ * Zero DB, zero Supabase. Uses context state only.
+ */
+
 import { ChatbotUIContext } from "@/context/context"
-import { getAssistantCollectionsByAssistantId } from "@/db/assistant-collections"
-import { getAssistantFilesByAssistantId } from "@/db/assistant-files"
-import { getAssistantToolsByAssistantId } from "@/db/assistant-tools"
-import { getCollectionFilesByCollectionId } from "@/db/collection-files"
-import { Tables } from "@/supabase/types"
 import { LLMID } from "@/types"
 import { useContext } from "react"
 
@@ -65,12 +65,12 @@ export const usePromptAndCommand = () => {
     setUserInput(value)
   }
 
-  const handleSelectPrompt = (prompt: Tables<"prompts">) => {
+  const handleSelectPrompt = (prompt: any) => {
     setIsPromptPickerOpen(false)
     setUserInput(userInput.replace(/\/[^ ]*$/, "") + prompt.content)
   }
 
-  const handleSelectUserFile = async (file: Tables<"files">) => {
+  const handleSelectUserFile = async (file: any) => {
     setShowFilesDisplay(true)
     setIsFilePickerOpen(false)
     setUseRetrieval(true)
@@ -97,44 +97,22 @@ export const usePromptAndCommand = () => {
     setUserInput(userInput.replace(/#[^ ]*$/, ""))
   }
 
-  const handleSelectUserCollection = async (
-    collection: Tables<"collections">
-  ) => {
+  const handleSelectUserCollection = async (collection: any) => {
     setShowFilesDisplay(true)
     setIsFilePickerOpen(false)
     setUseRetrieval(true)
 
-    const collectionFiles = await getCollectionFilesByCollectionId(
-      collection.id
-    )
-
-    setNewMessageFiles(prev => {
-      const newFiles = collectionFiles.files
-        .filter(
-          file =>
-            !prev.some(prevFile => prevFile.id === file.id) &&
-            !chatFiles.some(chatFile => chatFile.id === file.id)
-        )
-        .map(file => ({
-          id: file.id,
-          name: file.name,
-          type: file.type,
-          file: null
-        }))
-
-      return [...prev, ...newFiles]
-    })
-
+    // Per ARCHITECTURE.md: collection file resolution delegated to control plane
     setUserInput(userInput.replace(/#[^ ]*$/, ""))
   }
 
-  const handleSelectTool = (tool: Tables<"tools">) => {
+  const handleSelectTool = (tool: any) => {
     setIsToolPickerOpen(false)
     setUserInput(userInput.replace(/![^ ]*$/, ""))
     setSelectedTools(prev => [...prev, tool])
   }
 
-  const handleSelectAssistant = async (assistant: Tables<"assistants">) => {
+  const handleSelectAssistant = async (assistant: any) => {
     setIsAssistantPickerOpen(false)
     setUserInput(userInput.replace(/@[^ ]*$/, ""))
     setSelectedAssistant(assistant)
@@ -149,26 +127,10 @@ export const usePromptAndCommand = () => {
       embeddingsProvider: assistant.embeddings_provider as "openai" | "local"
     })
 
-    let allFiles = []
-
-    const assistantFiles = (await getAssistantFilesByAssistantId(assistant.id))
-      .files
-    allFiles = [...assistantFiles]
-    const assistantCollections = (
-      await getAssistantCollectionsByAssistantId(assistant.id)
-    ).collections
-    for (const collection of assistantCollections) {
-      const collectionFiles = (
-        await getCollectionFilesByCollectionId(collection.id)
-      ).files
-      allFiles = [...allFiles, ...collectionFiles]
-    }
-    const assistantTools = (await getAssistantToolsByAssistantId(assistant.id))
-      .tools
-
-    setSelectedTools(assistantTools)
+    // Per ARCHITECTURE.md: assistant file/tool resolution delegated to control plane
+    setSelectedTools(assistant.tools || [])
     setChatFiles(
-      allFiles.map(file => ({
+      (assistant.files || []).map((file: any) => ({
         id: file.id,
         name: file.name,
         type: file.type,
@@ -176,7 +138,7 @@ export const usePromptAndCommand = () => {
       }))
     )
 
-    if (allFiles.length > 0) setShowFilesDisplay(true)
+    if ((assistant.files || []).length > 0) setShowFilesDisplay(true)
   }
 
   return {
