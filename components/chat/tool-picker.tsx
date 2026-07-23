@@ -1,5 +1,4 @@
 import { ChatbotUIContext } from "@/context/context"
-import { Tables } from "@/supabase/types"
 import { IconBolt } from "@tabler/icons-react"
 import { FC, useContext, useEffect, useRef } from "react"
 import { usePromptAndCommand } from "./chat-hooks/use-prompt-and-command"
@@ -25,7 +24,7 @@ export const ToolPicker: FC<ToolPickerProps> = ({}) => {
     }
   }, [focusTool])
 
-  const filteredTools = tools.filter(tool =>
+  const filteredTools = tools.filter((tool: any) =>
     tool.name.toLowerCase().includes(toolCommand.toLowerCase())
   )
 
@@ -33,7 +32,7 @@ export const ToolPicker: FC<ToolPickerProps> = ({}) => {
     setIsToolPickerOpen(isOpen)
   }
 
-  const callSelectTool = (tool: Tables<"tools">) => {
+  const callSelectTool = (tool: any) => {
     handleSelectTool(tool)
     handleOpenChange(false)
   }
@@ -54,7 +53,6 @@ export const ToolPicker: FC<ToolPickerProps> = ({}) => {
         e.preventDefault()
         itemsRef.current[0]?.focus()
       } else if (e.key === "ArrowUp" && !e.shiftKey && index === 0) {
-        // go to last element if arrow up is pressed on first element
         e.preventDefault()
         itemsRef.current[itemsRef.current.length - 1]?.focus()
       } else if (e.key === "ArrowUp") {
@@ -79,7 +77,7 @@ export const ToolPicker: FC<ToolPickerProps> = ({}) => {
             </div>
           ) : (
             <>
-              {filteredTools.map((item, index) => (
+              {filteredTools.map((item: any, index: number) => (
                 <div
                   key={item.id}
                   ref={ref => {
@@ -87,7 +85,7 @@ export const ToolPicker: FC<ToolPickerProps> = ({}) => {
                   }}
                   tabIndex={0}
                   className="hover:bg-accent focus:bg-accent flex cursor-pointer items-center rounded p-2 focus:outline-none"
-                  onClick={() => callSelectTool(item as Tables<"tools">)}
+                  onClick={() => callSelectTool(item)}
                   onKeyDown={getKeyDownHandler(index)}
                 >
                   <IconBolt size={32} />
