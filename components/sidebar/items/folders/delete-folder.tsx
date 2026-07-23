@@ -9,16 +9,13 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 import { ChatbotUIContext } from "@/context/context"
-import { deleteFolder } from "@/db/folders"
-import { supabase } from "@/lib/supabase/browser-client"
-import { Tables } from "@/supabase/types"
 import { ContentType } from "@/types"
 import { IconTrash } from "@tabler/icons-react"
 import { FC, useContext, useRef, useState } from "react"
 import { toast } from "sonner"
 
 interface DeleteFolderProps {
-  folder: Tables<"folders">
+  folder: any
   contentType: ContentType
 }
 
@@ -54,25 +51,23 @@ export const DeleteFolder: FC<DeleteFolderProps> = ({
   }
 
   const handleDeleteFolderOnly = async () => {
-    await deleteFolder(folder.id)
+    try {
+      await fetch(`/api/v1/folders/${folder.id}`, { method: "DELETE" })
+    } catch (e) {
+      console.error("Failed to delete folder:", e)
+    }
 
-    setFolders(prevState => prevState.filter(c => c.id !== folder.id))
-
+    setFolders((prevState: any) => prevState.filter((c: any) => c.id !== folder.id))
     setShowFolderDialog(false)
 
     const setStateFunction = stateUpdateFunctions[contentType]
-
     if (!setStateFunction) return
 
     setStateFunction((prevItems: any) =>
       prevItems.map((item: any) => {
         if (item.folder_id === folder.id) {
-          return {
-            ...item,
-            folder_id: null
-          }
+          return { ...item, folder_id: null }
         }
-
         return item
       })
     )
@@ -80,16 +75,16 @@ export const DeleteFolder: FC<DeleteFolderProps> = ({
 
   const handleDeleteFolderAndItems = async () => {
     const setStateFunction = stateUpdateFunctions[contentType]
-
     if (!setStateFunction) return
 
-    const { error } = await supabase
-      .from(contentType)
-      .delete()
-      .eq("folder_id", folder.id)
-
-    if (error) {
-      toast.error(error.message)
+    try {
+      await fetch(`/api/v1/folders/${folder.id}/items`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType })
+      })
+    } catch (e) {
+      toast.error("Failed to delete folder items")
     }
 
     setStateFunction((prevItems: any) =>
@@ -128,7 +123,6 @@ export const DeleteFolder: FC<DeleteFolderProps> = ({
           </Button>
 
           <Button
-            ref={buttonRef}
             variant="destructive"
             onClick={handleDeleteFolderOnly}
           >

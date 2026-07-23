@@ -1,15 +1,15 @@
 import { FileIcon } from "@/components/ui/file-icon"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FILE_DESCRIPTION_MAX, FILE_NAME_MAX } from "@/db/limits"
-import { getFileFromStorage } from "@/db/storage/files"
-import { Tables } from "@/supabase/types"
 import { FC, useState } from "react"
 import { SidebarItem } from "../all/sidebar-display-item"
 
 interface FileItemProps {
-  file: Tables<"files">
+  file: any
 }
+
+const FILE_NAME_MAX = 100
+const FILE_DESCRIPTION_MAX = 500
 
 export const FileItem: FC<FileItemProps> = ({ file }) => {
   const [name, setName] = useState(file.name)
@@ -17,7 +17,7 @@ export const FileItem: FC<FileItemProps> = ({ file }) => {
   const [description, setDescription] = useState(file.description)
 
   const getLinkAndView = async () => {
-    const link = await getFileFromStorage(file.file_path)
+    const link = `/api/v1/files/${file.id}/download`
     window.open(link, "_blank")
   }
 
@@ -39,15 +39,12 @@ export const FileItem: FC<FileItemProps> = ({ file }) => {
 
           <div className="flex flex-col justify-between">
             <div>{file.type}</div>
-
             <div>{formatFileSize(file.size)}</div>
-
-            <div>{file.tokens.toLocaleString()} tokens</div>
+            <div>{file.tokens?.toLocaleString() || 0} tokens</div>
           </div>
 
           <div className="space-y-1">
             <Label>Name</Label>
-
             <Input
               placeholder="File name..."
               value={name}
@@ -58,7 +55,6 @@ export const FileItem: FC<FileItemProps> = ({ file }) => {
 
           <div className="space-y-1">
             <Label>Description</Label>
-
             <Input
               placeholder="File description..."
               value={description}

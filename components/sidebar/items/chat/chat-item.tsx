@@ -1,10 +1,7 @@
 import { ModelIcon } from "@/components/models/model-icon"
 import { WithTooltip } from "@/components/ui/with-tooltip"
 import { ChatbotUIContext } from "@/context/context"
-import { LLM_LIST } from "@/lib/models/llm/llm-list"
 import { cn } from "@/lib/utils"
-import { Tables } from "@/supabase/types"
-import { LLM } from "@/types"
 import { IconRobotFace } from "@tabler/icons-react"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
@@ -13,16 +10,14 @@ import { DeleteChat } from "./delete-chat"
 import { UpdateChat } from "./update-chat"
 
 interface ChatItemProps {
-  chat: Tables<"chats">
+  chat: any
 }
 
 export const ChatItem: FC<ChatItemProps> = ({ chat }) => {
   const {
     selectedWorkspace,
     selectedChat,
-    availableLocalModels,
-    assistantImages,
-    availableOpenRouterModels
+    assistantImages
   } = useContext(ChatbotUIContext)
 
   const router = useRouter()
@@ -43,14 +38,8 @@ export const ChatItem: FC<ChatItemProps> = ({ chat }) => {
     }
   }
 
-  const MODEL_DATA = [
-    ...LLM_LIST,
-    ...availableLocalModels,
-    ...availableOpenRouterModels
-  ].find(llm => llm.modelId === chat.model) as LLM
-
   const assistantImage = assistantImages.find(
-    image => image.assistantId === chat.assistant_id
+    (image: any) => image.assistantId === chat.assistant_id
   )?.base64
 
   return (
@@ -83,9 +72,9 @@ export const ChatItem: FC<ChatItemProps> = ({ chat }) => {
       ) : (
         <WithTooltip
           delayDuration={200}
-          display={<div>{MODEL_DATA?.modelName}</div>}
+          display={<div>{chat.model}</div>}
           trigger={
-            <ModelIcon provider={MODEL_DATA?.provider} height={30} width={30} />
+            <ModelIcon provider={(chat.model?.split("-")[0] || "openai") as any} height={30} width={30} />
           }
         />
       )}
@@ -102,7 +91,6 @@ export const ChatItem: FC<ChatItemProps> = ({ chat }) => {
         className={`ml-2 flex space-x-2 ${!isActive && "w-11 opacity-0 group-hover:opacity-100"}`}
       >
         <UpdateChat chat={chat} />
-
         <DeleteChat chat={chat} />
       </div>
     </div>

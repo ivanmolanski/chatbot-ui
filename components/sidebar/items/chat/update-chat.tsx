@@ -10,13 +10,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
-import { updateChat } from "@/db/chats"
-import { Tables } from "@/supabase/types"
 import { IconEdit } from "@tabler/icons-react"
 import { FC, useContext, useRef, useState } from "react"
 
 interface UpdateChatProps {
-  chat: Tables<"chats">
+  chat: any
 }
 
 export const UpdateChat: FC<UpdateChatProps> = ({ chat }) => {
@@ -28,12 +26,21 @@ export const UpdateChat: FC<UpdateChatProps> = ({ chat }) => {
   const [name, setName] = useState(chat.name)
 
   const handleUpdateChat = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    const updatedChat = await updateChat(chat.id, {
-      name
-    })
-    setChats(prevState =>
-      prevState.map(c => (c.id === chat.id ? updatedChat : c))
-    )
+    try {
+      const response = await fetch(`/api/v1/chats/${chat.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      })
+      if (response.ok) {
+        const updatedChat = await response.json()
+        setChats((prevState: any) =>
+          prevState.map((c: any) => (c.id === chat.id ? updatedChat : c))
+        )
+      }
+    } catch (error) {
+      console.error("Failed to update chat:", error)
+    }
 
     setShowChatDialog(false)
   }

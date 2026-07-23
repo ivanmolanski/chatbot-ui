@@ -10,13 +10,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
-import { updateFolder } from "@/db/folders"
-import { Tables } from "@/supabase/types"
 import { IconEdit } from "@tabler/icons-react"
 import { FC, useContext, useRef, useState } from "react"
 
 interface UpdateFolderProps {
-  folder: Tables<"folders">
+  folder: any
 }
 
 export const UpdateFolder: FC<UpdateFolderProps> = ({ folder }) => {
@@ -28,12 +26,21 @@ export const UpdateFolder: FC<UpdateFolderProps> = ({ folder }) => {
   const [name, setName] = useState(folder.name)
 
   const handleUpdateFolder = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    const updatedFolder = await updateFolder(folder.id, {
-      name
-    })
-    setFolders(prevState =>
-      prevState.map(c => (c.id === folder.id ? updatedFolder : c))
-    )
+    try {
+      const response = await fetch(`/api/v1/folders/${folder.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      })
+      if (response.ok) {
+        const updatedFolder = await response.json()
+        setFolders((prevState: any) =>
+          prevState.map((c: any) => (c.id === folder.id ? updatedFolder : c))
+        )
+      }
+    } catch (error) {
+      console.error("Failed to update folder:", error)
+    }
 
     setShowFolderDialog(false)
   }
@@ -66,7 +73,7 @@ export const UpdateFolder: FC<UpdateFolderProps> = ({ folder }) => {
             Cancel
           </Button>
 
-          <Button ref={buttonRef} onClick={handleUpdateFolder}>
+          <Button ref={buttonRef} onClick={handleUpdateChat}>
             Save
           </Button>
         </DialogFooter>

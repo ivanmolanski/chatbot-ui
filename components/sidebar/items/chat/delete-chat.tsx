@@ -10,14 +10,12 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 import { ChatbotUIContext } from "@/context/context"
-import { deleteChat } from "@/db/chats"
 import useHotkey from "@/lib/hooks/use-hotkey"
-import { Tables } from "@/supabase/types"
 import { IconTrash } from "@tabler/icons-react"
 import { FC, useContext, useRef, useState } from "react"
 
 interface DeleteChatProps {
-  chat: Tables<"chats">
+  chat: any
 }
 
 export const DeleteChat: FC<DeleteChatProps> = ({ chat }) => {
@@ -31,12 +29,14 @@ export const DeleteChat: FC<DeleteChatProps> = ({ chat }) => {
   const [showChatDialog, setShowChatDialog] = useState(false)
 
   const handleDeleteChat = async () => {
-    await deleteChat(chat.id)
+    try {
+      await fetch(`/api/v1/chats/${chat.id}`, { method: "DELETE" })
+    } catch (e) {
+      console.error("Failed to delete chat:", e)
+    }
 
-    setChats(prevState => prevState.filter(c => c.id !== chat.id))
-
+    setChats((prevState: any) => prevState.filter((c: any) => c.id !== chat.id))
     setShowChatDialog(false)
-
     handleNewChat()
   }
 
