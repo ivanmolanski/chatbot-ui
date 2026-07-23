@@ -1,5 +1,4 @@
 import { ChatbotUIContext } from "@/context/context"
-import { getFileFromStorage } from "@/db/storage/files"
 import useHotkey from "@/lib/hooks/use-hotkey"
 import { cn } from "@/lib/utils"
 import { ChatFile, MessageImage } from "@/types"
@@ -64,11 +63,8 @@ export const ChatFilesDisplay: FC<ChatFilesDisplayProps> = ({}) => {
   const combinedMessageFiles = [...messageImages, ...combinedChatFiles]
 
   const getLinkAndView = async (file: ChatFile) => {
-    const fileRecord = files.find(f => f.id === file.id)
-
-    if (!fileRecord) return
-
-    const link = await getFileFromStorage(fileRecord.file_path)
+    // Per ARCHITECTURE.md: file access delegated to control plane via proxy
+    const link = `/api/v1/files/${file.id}/download`
     window.open(link, "_blank")
   }
 
@@ -123,14 +119,13 @@ export const ChatFilesDisplay: FC<ChatFilesDisplayProps> = ({}) => {
               >
                 <Image
                   className="rounded"
-                  // Force the image to be 56px by 56px
                   style={{
                     minWidth: "56px",
                     minHeight: "56px",
                     maxHeight: "56px",
                     maxWidth: "56px"
                   }}
-                  src={image.base64} // Preview images will always be base64
+                  src={image.base64}
                   alt="File image"
                   width={56}
                   height={56}
