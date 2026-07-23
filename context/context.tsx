@@ -1,4 +1,15 @@
-import { Tables } from "@/supabase/types"
+/**
+ * ChatbotUIContext — Application state context.
+ * Uses ai-platform domain types. Zero Supabase. Zero DB.
+ * Per ARCHITECTURE.md Phase 1: Execution is primary.
+ */
+
+import type {
+  Conversation,
+  Message,
+  Execution
+} from "@/lib/ai-platform/domain/types"
+import type { PlatformCapabilities } from "@/lib/ai-platform/domain/types"
 import {
   ChatFile,
   ChatMessage,
@@ -9,39 +20,42 @@ import {
   WorkspaceImage
 } from "@/types"
 import { AssistantImage } from "@/types/images/assistant-image"
-import { VALID_ENV_KEYS } from "@/types/valid-keys"
 import { Dispatch, SetStateAction, createContext } from "react"
 
 interface ChatbotUIContext {
+  // PLATFORM
+  capabilities: PlatformCapabilities | null
+  setCapabilities: Dispatch<SetStateAction<PlatformCapabilities | null>>
+
   // PROFILE STORE
-  profile: Tables<"profiles"> | null
-  setProfile: Dispatch<SetStateAction<Tables<"profiles"> | null>>
+  profile: any | null
+  setProfile: Dispatch<SetStateAction<any | null>>
 
   // ITEMS STORE
-  assistants: Tables<"assistants">[]
-  setAssistants: Dispatch<SetStateAction<Tables<"assistants">[]>>
-  collections: Tables<"collections">[]
-  setCollections: Dispatch<SetStateAction<Tables<"collections">[]>>
-  chats: Tables<"chats">[]
-  setChats: Dispatch<SetStateAction<Tables<"chats">[]>>
-  files: Tables<"files">[]
-  setFiles: Dispatch<SetStateAction<Tables<"files">[]>>
-  folders: Tables<"folders">[]
-  setFolders: Dispatch<SetStateAction<Tables<"folders">[]>>
-  models: Tables<"models">[]
-  setModels: Dispatch<SetStateAction<Tables<"models">[]>>
-  presets: Tables<"presets">[]
-  setPresets: Dispatch<SetStateAction<Tables<"presets">[]>>
-  prompts: Tables<"prompts">[]
-  setPrompts: Dispatch<SetStateAction<Tables<"prompts">[]>>
-  tools: Tables<"tools">[]
-  setTools: Dispatch<SetStateAction<Tables<"tools">[]>>
-  workspaces: Tables<"workspaces">[]
-  setWorkspaces: Dispatch<SetStateAction<Tables<"workspaces">[]>>
+  assistants: any[]
+  setAssistants: Dispatch<SetStateAction<any[]>>
+  collections: any[]
+  setCollections: Dispatch<SetStateAction<any[]>>
+  chats: any[]
+  setChats: Dispatch<SetStateAction<any[]>>
+  files: any[]
+  setFiles: Dispatch<SetStateAction<any[]>>
+  folders: any[]
+  setFolders: Dispatch<SetStateAction<any[]>>
+  models: any[]
+  setModels: Dispatch<SetStateAction<any[]>>
+  presets: any[]
+  setPresets: Dispatch<SetStateAction<any[]>>
+  prompts: any[]
+  setPrompts: Dispatch<SetStateAction<any[]>>
+  tools: any[]
+  setTools: Dispatch<SetStateAction<any[]>>
+  workspaces: any[]
+  setWorkspaces: Dispatch<SetStateAction<any[]>>
 
   // MODELS STORE
-  envKeyMap: Record<string, VALID_ENV_KEYS>
-  setEnvKeyMap: Dispatch<SetStateAction<Record<string, VALID_ENV_KEYS>>>
+  envKeyMap: Record<string, string>
+  setEnvKeyMap: Dispatch<SetStateAction<Record<string, string>>>
   availableHostedModels: LLM[]
   setAvailableHostedModels: Dispatch<SetStateAction<LLM[]>>
   availableLocalModels: LLM[]
@@ -50,18 +64,18 @@ interface ChatbotUIContext {
   setAvailableOpenRouterModels: Dispatch<SetStateAction<OpenRouterLLM[]>>
 
   // WORKSPACE STORE
-  selectedWorkspace: Tables<"workspaces"> | null
-  setSelectedWorkspace: Dispatch<SetStateAction<Tables<"workspaces"> | null>>
+  selectedWorkspace: any | null
+  setSelectedWorkspace: Dispatch<SetStateAction<any | null>>
   workspaceImages: WorkspaceImage[]
   setWorkspaceImages: Dispatch<SetStateAction<WorkspaceImage[]>>
 
   // PRESET STORE
-  selectedPreset: Tables<"presets"> | null
-  setSelectedPreset: Dispatch<SetStateAction<Tables<"presets"> | null>>
+  selectedPreset: any | null
+  setSelectedPreset: Dispatch<SetStateAction<any | null>>
 
   // ASSISTANT STORE
-  selectedAssistant: Tables<"assistants"> | null
-  setSelectedAssistant: Dispatch<SetStateAction<Tables<"assistants"> | null>>
+  selectedAssistant: any | null
+  setSelectedAssistant: Dispatch<SetStateAction<any | null>>
   assistantImages: AssistantImage[]
   setAssistantImages: Dispatch<SetStateAction<AssistantImage[]>>
   openaiAssistants: any[]
@@ -74,10 +88,10 @@ interface ChatbotUIContext {
   setChatMessages: Dispatch<SetStateAction<ChatMessage[]>>
   chatSettings: ChatSettings | null
   setChatSettings: Dispatch<SetStateAction<ChatSettings>>
-  selectedChat: Tables<"chats"> | null
-  setSelectedChat: Dispatch<SetStateAction<Tables<"chats"> | null>>
-  chatFileItems: Tables<"file_items">[]
-  setChatFileItems: Dispatch<SetStateAction<Tables<"file_items">[]>>
+  selectedChat: any | null
+  setSelectedChat: Dispatch<SetStateAction<any | null>>
+  chatFileItems: any[]
+  setChatFileItems: Dispatch<SetStateAction<any[]>>
 
   // ACTIVE CHAT STORE
   abortController: AbortController | null
@@ -132,13 +146,17 @@ interface ChatbotUIContext {
   setSourceCount: Dispatch<SetStateAction<number>>
 
   // TOOL STORE
-  selectedTools: Tables<"tools">[]
-  setSelectedTools: Dispatch<SetStateAction<Tables<"tools">[]>>
+  selectedTools: any[]
+  setSelectedTools: Dispatch<SetStateAction<any[]>>
   toolInUse: string
   setToolInUse: Dispatch<SetStateAction<string>>
 }
 
 export const ChatbotUIContext = createContext<ChatbotUIContext>({
+  // PLATFORM
+  capabilities: null,
+  setCapabilities: () => {},
+
   // PROFILE STORE
   profile: null,
   setProfile: () => {},
