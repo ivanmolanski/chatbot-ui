@@ -1,21 +1,27 @@
+/**
+ * Root Layout — Presentation layer only.
+ * Zero infrastructure imports. Zero Supabase. Zero DB.
+ * Imports ONLY: lib/ai-platform, React, Next.js, shadcn UI primitives.
+ *
+ * Per ARCHITECTURE.md Phase 1: Execution is primary.
+ * Conversation is a view over executions. Layout renders children.
+ * Auth is handled by the proxy (Phase 11) — API key injected server-side.
+ */
+
 import { Toaster } from "@/components/ui/sonner"
-import { GlobalState } from "@/components/utility/global-state"
 import { Providers } from "@/components/utility/providers"
 import TranslationsProvider from "@/components/utility/translations-provider"
 import initTranslations from "@/lib/i18n"
-import { Database } from "@/supabase/types"
-import { createServerClient } from "@supabase/ssr"
 import { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
-import { cookies } from "next/headers"
 import { ReactNode } from "react"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
-const APP_NAME = "Chatbot UI"
-const APP_DEFAULT_TITLE = "Chatbot UI"
-const APP_TITLE_TEMPLATE = "%s - Chatbot UI"
-const APP_DESCRIPTION = "Chabot UI PWA!"
+const APP_NAME = "AF Deep Research"
+const APP_DEFAULT_TITLE = "AF Deep Research"
+const APP_TITLE_TEMPLATE = "%s - AF Deep Research"
+const APP_DESCRIPTION = "Deep research platform powered by Agent Field"
 
 interface RootLayoutProps {
   children: ReactNode
@@ -36,7 +42,6 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black",
     title: APP_DEFAULT_TITLE
-    // startUpImage: [],
   },
   formatDetection: {
     telephone: false
@@ -70,21 +75,7 @@ export default async function RootLayout({
   children,
   params: { locale }
 }: RootLayoutProps) {
-  const cookieStore = cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        }
-      }
-    }
-  )
-  const session = (await supabase.auth.getSession()).data.session
-
-  const { t, resources } = await initTranslations(locale, i18nNamespaces)
+  const { resources } = await initTranslations(locale, i18nNamespaces)
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -97,7 +88,7 @@ export default async function RootLayout({
           >
             <Toaster richColors position="top-center" duration={3000} />
             <div className="bg-background text-foreground flex h-dvh flex-col items-center overflow-x-auto">
-              {session ? <GlobalState>{children}</GlobalState> : children}
+              {children}
             </div>
           </TranslationsProvider>
         </Providers>
