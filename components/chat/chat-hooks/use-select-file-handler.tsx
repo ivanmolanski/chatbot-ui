@@ -1,7 +1,9 @@
+/**
+ * File Selection Handler — Per ARCHITECTURE.md Phase 12.
+ * Zero DB, zero Supabase. Manages UI state only; file persistence delegated to control plane.
+ */
+
 import { ChatbotUIContext } from "@/context/context"
-import { createDocXFile, createFile } from "@/db/files"
-import { LLM_LIST } from "@/lib/models/llm/llm-list"
-import mammoth from "mammoth"
 import { useContext, useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -17,36 +19,30 @@ export const ACCEPTED_FILE_TYPES = [
 export const useSelectFileHandler = () => {
   const {
     selectedWorkspace,
-    profile,
     chatSettings,
     setNewMessageImages,
     setNewMessageFiles,
     setShowFilesDisplay,
-    setFiles,
     setUseRetrieval
   } = useContext(ChatbotUIContext)
 
   const [filesToAccept, setFilesToAccept] = useState(ACCEPTED_FILE_TYPES)
 
   useEffect(() => {
-    handleFilesToAccept()
-  }, [chatSettings?.model])
-
-  const handleFilesToAccept = () => {
     const model = chatSettings?.model
-    const FULL_MODEL = LLM_LIST.find(llm => llm.modelId === model)
+    if (!model) return
 
-    if (!FULL_MODEL) return
-
+    // Per ARCHITECTURE.md: model capabilities served by control plane
+    // Allow images when model supports vision (determined by control plane)
     setFilesToAccept(
-      FULL_MODEL.imageInput
+      model.includes("vision") || model.includes("gpt-4o")
         ? `${ACCEPTED_FILE_TYPES},image/*`
         : ACCEPTED_FILE_TYPES
     )
-  }
+  }, [chatSettings?.model])
 
   const handleSelectDeviceFile = async (file: File) => {
-    if (!profile || !selectedWorkspace || !chatSettings) return
+    if (!selectedWorkspace || !chatSettings) return
 
     setShowFilesDisplay(true)
     setUseRetrieval(true)
@@ -54,145 +50,46 @@ export const useSelectFileHandler = () => {
     if (file) {
       let simplifiedFileType = file.type.split("/")[1]
 
-      let reader = new FileReader()
-
       if (file.type.includes("image")) {
+        const reader = new FileReader()
         reader.readAsDataURL(file)
+        reader.onloadend = function () {
+          const imageUrl = URL.createObjectURL(file)
+          setNewMessageImages(prev => [
+            ...prev,
+            {
+              messageId: "temp",
+              path: "",
+              base64: reader.result as string,
+              url: imageUrl,
+              file
+            }
+          ])
+        }
       } else if (ACCEPTED_FILE_TYPES.split(",").includes(file.type)) {
         if (simplifiedFileType.includes("vnd.adobe.pdf")) {
           simplifiedFileType = "pdf"
         } else if (
           simplifiedFileType.includes(
-            "vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-              "docx"
+            "vnd.openxmlformats-officedocument.wordprocessingml.document"
           )
         ) {
           simplifiedFileType = "docx"
         }
 
+        // Per ARCHITECTURE.md: file upload delegated to control plane
+        // For now, track file locally for upload with the message
         setNewMessageFiles(prev => [
           ...prev,
           {
-            id: "loading",
+            id: `local_${Date.now()}`,
             name: file.name,
             type: simplifiedFileType,
             file: file
           }
         ])
-
-        // Handle docx files
-        if (
-          file.type.includes(
-            "vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-              "docx"
-          )
-        ) {
-          const arrayBuffer = await file.arrayBuffer()
-          const result = await mammoth.extractRawText({
-            arrayBuffer
-          })
-
-          const createdFile = await createDocXFile(
-            result.value,
-            file,
-            {
-              user_id: profile.user_id,
-              description: "",
-              file_path: "",
-              name: file.name,
-              size: file.size,
-              tokens: 0,
-              type: simplifiedFileType
-            },
-            selectedWorkspace.id,
-            chatSettings.embeddingsProvider
-          )
-
-          setFiles(prev => [...prev, createdFile])
-
-          setNewMessageFiles(prev =>
-            prev.map(item =>
-              item.id === "loading"
-                ? {
-                    id: createdFile.id,
-                    name: createdFile.name,
-                    type: createdFile.type,
-                    file: file
-                  }
-                : item
-            )
-          )
-
-          reader.onloadend = null
-
-          return
-        } else {
-          // Use readAsArrayBuffer for PDFs and readAsText for other types
-          file.type.includes("pdf")
-            ? reader.readAsArrayBuffer(file)
-            : reader.readAsText(file)
-        }
       } else {
-        throw new Error("Unsupported file type")
-      }
-
-      reader.onloadend = async function () {
-        try {
-          if (file.type.includes("image")) {
-            // Create a temp url for the image file
-            const imageUrl = URL.createObjectURL(file)
-
-            // This is a temporary image for display purposes in the chat input
-            setNewMessageImages(prev => [
-              ...prev,
-              {
-                messageId: "temp",
-                path: "",
-                base64: reader.result, // base64 image
-                url: imageUrl,
-                file
-              }
-            ])
-          } else {
-            const createdFile = await createFile(
-              file,
-              {
-                user_id: profile.user_id,
-                description: "",
-                file_path: "",
-                name: file.name,
-                size: file.size,
-                tokens: 0,
-                type: simplifiedFileType
-              },
-              selectedWorkspace.id,
-              chatSettings.embeddingsProvider
-            )
-
-            setFiles(prev => [...prev, createdFile])
-
-            setNewMessageFiles(prev =>
-              prev.map(item =>
-                item.id === "loading"
-                  ? {
-                      id: createdFile.id,
-                      name: createdFile.name,
-                      type: createdFile.type,
-                      file: file
-                    }
-                  : item
-              )
-            )
-          }
-        } catch (error: any) {
-          toast.error("Failed to upload. " + error?.message, {
-            duration: 10000
-          })
-          setNewMessageImages(prev =>
-            prev.filter(img => img.messageId !== "temp")
-          )
-          setNewMessageFiles(prev => prev.filter(file => file.id !== "loading"))
-        }
+        toast.error("Unsupported file type. Supported: CSV, DOCX, JSON, MD, PDF, TXT")
       }
     }
   }
