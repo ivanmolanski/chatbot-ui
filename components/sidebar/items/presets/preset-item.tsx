@@ -2,14 +2,11 @@ import { ModelIcon } from "@/components/models/model-icon"
 import { ChatSettingsForm } from "@/components/ui/chat-settings-form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PRESET_NAME_MAX } from "@/db/limits"
-import { LLM_LIST } from "@/lib/models/llm/llm-list"
-import { Tables } from "@/supabase/types"
 import { FC, useState } from "react"
 import { SidebarItem } from "../all/sidebar-display-item"
 
 interface PresetItemProps {
-  preset: Tables<"presets">
+  preset: any
 }
 
 export const PresetItem: FC<PresetItemProps> = ({ preset }) => {
@@ -25,7 +22,7 @@ export const PresetItem: FC<PresetItemProps> = ({ preset }) => {
     includeWorkspaceInstructions: preset.include_workspace_instructions
   })
 
-  const modelDetails = LLM_LIST.find(model => model.modelId === preset.model)
+  const modelDetails = availableHostedModels.find((m: any) => m.modelId === preset.model)
 
   return (
     <SidebarItem
@@ -59,7 +56,7 @@ export const PresetItem: FC<PresetItemProps> = ({ preset }) => {
               placeholder="Preset name..."
               value={name}
               onChange={e => setName(e.target.value)}
-              maxLength={PRESET_NAME_MAX}
+              maxLength={100}
             />
           </div>
 

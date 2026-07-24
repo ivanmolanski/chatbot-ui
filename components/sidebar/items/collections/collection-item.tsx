@@ -1,7 +1,5 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { COLLECTION_DESCRIPTION_MAX, COLLECTION_NAME_MAX } from "@/db/limits"
-import { Tables } from "@/supabase/types"
 import { CollectionFile } from "@/types"
 import { IconBooks } from "@tabler/icons-react"
 import { FC, useState } from "react"
@@ -9,7 +7,7 @@ import { SidebarItem } from "../all/sidebar-display-item"
 import { CollectionFileSelect } from "./collection-file-select"
 
 interface CollectionItemProps {
-  collection: Tables<"collections">
+  collection: any
 }
 
 export const CollectionItem: FC<CollectionItemProps> = ({ collection }) => {
@@ -95,7 +93,7 @@ export const CollectionItem: FC<CollectionItemProps> = ({ collection }) => {
                 placeholder="Collection name..."
                 value={name}
                 onChange={e => setName(e.target.value)}
-                maxLength={COLLECTION_NAME_MAX}
+                maxLength={100}
               />
             </div>
 
@@ -106,7 +104,7 @@ export const CollectionItem: FC<CollectionItemProps> = ({ collection }) => {
                 placeholder="Collection description..."
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                maxLength={COLLECTION_DESCRIPTION_MAX}
+                maxLength={500}
               />
             </div>
           </>

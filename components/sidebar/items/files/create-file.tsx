@@ -3,8 +3,6 @@ import { SidebarCreateItem } from "@/components/sidebar/items/all/sidebar-create
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
-import { FILE_DESCRIPTION_MAX, FILE_NAME_MAX } from "@/db/limits"
-import { TablesInsert } from "@/supabase/types"
 import { FC, useContext, useState } from "react"
 
 interface CreateFileProps {
@@ -48,7 +46,7 @@ export const CreateFile: FC<CreateFileProps> = ({ isOpen, onOpenChange }) => {
           size: selectedFile?.size || 0,
           tokens: 0,
           type: selectedFile?.type || 0
-        } as TablesInsert<"files">
+        } as any
       }
       isOpen={isOpen}
       isTyping={isTyping}

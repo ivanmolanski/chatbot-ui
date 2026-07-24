@@ -1,6 +1,5 @@
-import { Tables } from "@/supabase/types"
 
 export interface ChatMessage {
-  message: Tables<"messages">
+  message: any
   fileItems: string[]
 }

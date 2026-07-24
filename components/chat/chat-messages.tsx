@@ -1,6 +1,5 @@
 import { useChatHandler } from "@/components/chat/chat-hooks/use-chat-handler"
 import { ChatbotUIContext } from "@/context/context"
-import { Tables } from "@/supabase/types"
 import { FC, useContext, useState } from "react"
 import { Message } from "../messages/message"
 
@@ -11,7 +10,7 @@ export const ChatMessages: FC<ChatMessagesProps> = ({}) => {
 
   const { handleSendEdit } = useChatHandler()
 
-  const [editingMessage, setEditingMessage] = useState<Tables<"messages">>()
+  const [editingMessage, setEditingMessage] = useState<any>()
 
   return chatMessages
     .sort((a, b) => a.message.sequence_number - b.message.sequence_number)

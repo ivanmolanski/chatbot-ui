@@ -9,16 +9,6 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 import { ChatbotUIContext } from "@/context/context"
-import { deleteAssistant } from "@/db/assistants"
-import { deleteChat } from "@/db/chats"
-import { deleteCollection } from "@/db/collections"
-import { deleteFile } from "@/db/files"
-import { deleteModel } from "@/db/models"
-import { deletePreset } from "@/db/presets"
-import { deletePrompt } from "@/db/prompts"
-import { deleteFileFromStorage } from "@/db/storage/files"
-import { deleteTool } from "@/db/tools"
-import { Tables } from "@/supabase/types"
 import { ContentType, DataItemType } from "@/types"
 import { FC, useContext, useRef, useState } from "react"
 
@@ -47,32 +37,32 @@ export const SidebarDeleteItem: FC<SidebarDeleteItemProps> = ({
   const [showDialog, setShowDialog] = useState(false)
 
   const deleteFunctions = {
-    chats: async (chat: Tables<"chats">) => {
+    chats: async (chat: any) => {
       await deleteChat(chat.id)
     },
-    presets: async (preset: Tables<"presets">) => {
+    presets: async (preset: any) => {
       await deletePreset(preset.id)
     },
-    prompts: async (prompt: Tables<"prompts">) => {
+    prompts: async (prompt: any) => {
       await deletePrompt(prompt.id)
     },
-    files: async (file: Tables<"files">) => {
+    files: async (file: any) => {
       await deleteFileFromStorage(file.file_path)
       await deleteFile(file.id)
     },
-    collections: async (collection: Tables<"collections">) => {
+    collections: async (collection: any) => {
       await deleteCollection(collection.id)
     },
-    assistants: async (assistant: Tables<"assistants">) => {
+    assistants: async (assistant: any) => {
       await deleteAssistant(assistant.id)
       setChats(prevState =>
         prevState.filter(chat => chat.assistant_id !== assistant.id)
       )
     },
-    tools: async (tool: Tables<"tools">) => {
+    tools: async (tool: any) => {
       await deleteTool(tool.id)
     },
-    models: async (model: Tables<"models">) => {
+    models: async (model: any) => {
       await deleteModel(model.id)
     }
   }

@@ -2,8 +2,6 @@ import { SidebarCreateItem } from "@/components/sidebar/items/all/sidebar-create
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
-import { COLLECTION_DESCRIPTION_MAX, COLLECTION_NAME_MAX } from "@/db/limits"
-import { TablesInsert } from "@/supabase/types"
 import { CollectionFile } from "@/types"
 import { FC, useContext, useState } from "react"
 import { CollectionFileSelect } from "./collection-file-select"
@@ -56,7 +54,7 @@ export const CreateCollection: FC<CreateCollectionProps> = ({
           user_id: profile.user_id,
           name,
           description
-        } as TablesInsert<"collections">
+        } as any
       }
       isOpen={isOpen}
       isTyping={isTyping}
@@ -79,7 +77,7 @@ export const CreateCollection: FC<CreateCollectionProps> = ({
               placeholder="Collection name..."
               value={name}
               onChange={e => setName(e.target.value)}
-              maxLength={COLLECTION_NAME_MAX}
+              maxLength={100}
             />
           </div>
 
@@ -90,7 +88,7 @@ export const CreateCollection: FC<CreateCollectionProps> = ({
               placeholder="Collection description..."
               value={description}
               onChange={e => setDescription(e.target.value)}
-              maxLength={COLLECTION_DESCRIPTION_MAX}
+              maxLength={500}
             />
           </div>
         </>

@@ -3,8 +3,6 @@ import ImagePicker from "@/components/ui/image-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
-import { ASSISTANT_DESCRIPTION_MAX, ASSISTANT_NAME_MAX } from "@/db/limits"
-import { Tables } from "@/supabase/types"
 import { IconRobotFace } from "@tabler/icons-react"
 import Image from "next/image"
 import { FC, useContext, useEffect, useState } from "react"
@@ -14,7 +12,7 @@ import { AssistantRetrievalSelect } from "./assistant-retrieval-select"
 import { AssistantToolSelect } from "./assistant-tool-select"
 
 interface AssistantItemProps {
-  assistant: Tables<"assistants">
+  assistant: any
 }
 
 export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
@@ -42,9 +40,9 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
   }, [assistant, assistantImages])
 
   const handleFileSelect = (
-    file: Tables<"files">,
+    file: any,
     setSelectedAssistantFiles: React.Dispatch<
-      React.SetStateAction<Tables<"files">[]>
+      React.SetStateAction<any[]>
     >
   ) => {
     setSelectedAssistantFiles(prevState => {
@@ -61,9 +59,9 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
   }
 
   const handleCollectionSelect = (
-    collection: Tables<"collections">,
+    collection: any,
     setSelectedAssistantCollections: React.Dispatch<
-      React.SetStateAction<Tables<"collections">[]>
+      React.SetStateAction<any[]>
     >
   ) => {
     setSelectedAssistantCollections(prevState => {
@@ -82,9 +80,9 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
   }
 
   const handleToolSelect = (
-    tool: Tables<"tools">,
+    tool: any,
     setSelectedAssistantTools: React.Dispatch<
-      React.SetStateAction<Tables<"tools">[]>
+      React.SetStateAction<any[]>
     >
   ) => {
     setSelectedAssistantTools(prevState => {
@@ -140,29 +138,29 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
         temperature: assistantChatSettings.temperature
       }}
       renderInputs={(renderState: {
-        startingAssistantFiles: Tables<"files">[]
+        startingAssistantFiles: any[]
         setStartingAssistantFiles: React.Dispatch<
-          React.SetStateAction<Tables<"files">[]>
+          React.SetStateAction<any[]>
         >
-        selectedAssistantFiles: Tables<"files">[]
+        selectedAssistantFiles: any[]
         setSelectedAssistantFiles: React.Dispatch<
-          React.SetStateAction<Tables<"files">[]>
+          React.SetStateAction<any[]>
         >
-        startingAssistantCollections: Tables<"collections">[]
+        startingAssistantCollections: any[]
         setStartingAssistantCollections: React.Dispatch<
-          React.SetStateAction<Tables<"collections">[]>
+          React.SetStateAction<any[]>
         >
-        selectedAssistantCollections: Tables<"collections">[]
+        selectedAssistantCollections: any[]
         setSelectedAssistantCollections: React.Dispatch<
-          React.SetStateAction<Tables<"collections">[]>
+          React.SetStateAction<any[]>
         >
-        startingAssistantTools: Tables<"tools">[]
+        startingAssistantTools: any[]
         setStartingAssistantTools: React.Dispatch<
-          React.SetStateAction<Tables<"tools">[]>
+          React.SetStateAction<any[]>
         >
-        selectedAssistantTools: Tables<"tools">[]
+        selectedAssistantTools: any[]
         setSelectedAssistantTools: React.Dispatch<
-          React.SetStateAction<Tables<"tools">[]>
+          React.SetStateAction<any[]>
         >
       }) => (
         <>

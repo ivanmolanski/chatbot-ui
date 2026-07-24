@@ -1,8 +1,6 @@
 import { useChatHandler } from "@/components/chat/chat-hooks/use-chat-handler"
 import { ChatbotUIContext } from "@/context/context"
-import { LLM_LIST } from "@/lib/models/llm/llm-list"
 import { cn } from "@/lib/utils"
-import { Tables } from "@/supabase/types"
 import { LLM, LLMID, MessageImage, ModelProvider } from "@/types"
 import {
   IconBolt,
@@ -27,11 +25,11 @@ import { MessageMarkdown } from "./message-markdown"
 const ICON_SIZE = 32
 
 interface MessageProps {
-  message: Tables<"messages">
-  fileItems: Tables<"file_items">[]
+  message: any
+  fileItems: any[]
   isEditing: boolean
   isLast: boolean
-  onStartEdit: (message: Tables<"messages">) => void
+  onStartEdit: (message: any) => void
   onCancelEdit: () => void
   onSubmitEdit: (value: string, sequenceNumber: number) => void
 }
@@ -74,7 +72,7 @@ export const Message: FC<MessageProps> = ({
 
   const [showFileItemPreview, setShowFileItemPreview] = useState(false)
   const [selectedFileItem, setSelectedFileItem] =
-    useState<Tables<"file_items"> | null>(null)
+    useState<any | null>(null)
 
   const [viewSources, setViewSources] = useState(false)
 
@@ -135,7 +133,7 @@ export const Message: FC<MessageProps> = ({
       platformLink: "",
       imageInput: false
     })),
-    ...LLM_LIST,
+    ...availableHostedModels,
     ...availableLocalModels,
     ...availableOpenRouterModels
   ].find(llm => llm.modelId === message.model) as LLM
@@ -148,7 +146,7 @@ export const Message: FC<MessageProps> = ({
     image => image.path === selectedAssistant?.image_path
   )?.base64
 
-  const modelDetails = LLM_LIST.find(model => model.modelId === message.model)
+  const modelDetails = availableHostedModels.find((m: any) => m.modelId === message.model)
 
   const fileAccumulator: Record<
     string,

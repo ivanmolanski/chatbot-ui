@@ -1,7 +1,7 @@
 "use client"
 
 import { ChatbotUIContext } from "@/context/context"
-import { CHAT_SETTING_LIMITS } from "@/lib/chat-setting-limits"
+
 import { ChatSettings } from "@/types"
 import { IconInfoCircle } from "@tabler/icons-react"
 import { FC, useContext } from "react"
@@ -108,7 +108,7 @@ const AdvancedContent: FC<AdvancedContentProps> = ({
     return availableOpenRouterModels.find(model => model.modelId === modelId)
   }
 
-  const MODEL_LIMITS = CHAT_SETTING_LIMITS[chatSettings.model] || {
+  const MODEL_LIMITS = {
     MIN_TEMPERATURE: 0,
     MAX_TEMPERATURE: 1,
     MAX_CONTEXT_LENGTH:

@@ -1,6 +1,5 @@
 "use client"
 
-import { supabase } from "@/lib/supabase/browser-client"
 import { useRouter } from "next/navigation"
 import { FC, useState } from "react"
 import { Button } from "../ui/button"
@@ -25,7 +24,7 @@ export const ChangePassword: FC<ChangePasswordProps> = () => {
   const handleResetPassword = async () => {
     if (!newPassword) return toast.info("Please enter your new password.")
 
-    await supabase.auth.updateUser({ password: newPassword })
+    await fetch('/api/v1/auth/update-password', { method: 'POST', body: JSON.stringify({ password: newPassword }) })
 
     toast.success("Password changed successfully.")
 

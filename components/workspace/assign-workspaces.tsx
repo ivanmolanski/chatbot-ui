@@ -1,5 +1,4 @@
 import { ChatbotUIContext } from "@/context/context"
-import { Tables } from "@/supabase/types"
 import { IconChevronDown, IconCircleCheckFilled } from "@tabler/icons-react"
 import { FC, useContext, useEffect, useRef, useState } from "react"
 import { Button } from "../ui/button"
@@ -12,8 +11,8 @@ import { Input } from "../ui/input"
 import { toast } from "sonner"
 
 interface AssignWorkspaces {
-  selectedWorkspaces: Tables<"workspaces">[]
-  onSelectWorkspace: (workspace: Tables<"workspaces">) => void
+  selectedWorkspaces: any[]
+  onSelectWorkspace: (workspace: any) => void
 }
 
 export const AssignWorkspaces: FC<AssignWorkspaces> = ({
@@ -36,7 +35,7 @@ export const AssignWorkspaces: FC<AssignWorkspaces> = ({
     }
   }, [isOpen])
 
-  const handleWorkspaceSelect = (workspace: Tables<"workspaces">) => {
+  const handleWorkspaceSelect = (workspace: any) => {
     onSelectWorkspace(workspace)
   }
 
@@ -122,10 +121,10 @@ export const AssignWorkspaces: FC<AssignWorkspaces> = ({
 }
 
 interface WorkspaceItemProps {
-  selectedWorkspaces: Tables<"workspaces">[]
-  workspace: Tables<"workspaces">
+  selectedWorkspaces: any[]
+  workspace: any
   selected: boolean
-  onSelect: (workspace: Tables<"workspaces">) => void
+  onSelect: (workspace: any) => void
 }
 
 const WorkspaceItem: FC<WorkspaceItemProps> = ({

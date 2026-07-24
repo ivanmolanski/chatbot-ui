@@ -14,71 +14,56 @@ import {
   createAssistantCollection,
   deleteAssistantCollection,
   getAssistantCollectionsByAssistantId
-} from "@/db/assistant-collections"
 import {
   createAssistantFile,
   deleteAssistantFile,
   getAssistantFilesByAssistantId
-} from "@/db/assistant-files"
 import {
   createAssistantTool,
   deleteAssistantTool,
   getAssistantToolsByAssistantId
-} from "@/db/assistant-tools"
 import {
   createAssistantWorkspaces,
   deleteAssistantWorkspace,
   getAssistantWorkspacesByAssistantId,
   updateAssistant
-} from "@/db/assistants"
-import { updateChat } from "@/db/chats"
 import {
   createCollectionFile,
   deleteCollectionFile,
   getCollectionFilesByCollectionId
-} from "@/db/collection-files"
 import {
   createCollectionWorkspaces,
   deleteCollectionWorkspace,
   getCollectionWorkspacesByCollectionId,
   updateCollection
-} from "@/db/collections"
 import {
   createFileWorkspaces,
   deleteFileWorkspace,
   getFileWorkspacesByFileId,
   updateFile
-} from "@/db/files"
 import {
   createModelWorkspaces,
   deleteModelWorkspace,
   getModelWorkspacesByModelId,
   updateModel
-} from "@/db/models"
 import {
   createPresetWorkspaces,
   deletePresetWorkspace,
   getPresetWorkspacesByPresetId,
   updatePreset
-} from "@/db/presets"
 import {
   createPromptWorkspaces,
   deletePromptWorkspace,
   getPromptWorkspacesByPromptId,
   updatePrompt
-} from "@/db/prompts"
 import {
   getAssistantImageFromStorage,
   uploadAssistantImage
-} from "@/db/storage/assistant-images"
 import {
   createToolWorkspaces,
   deleteToolWorkspace,
   getToolWorkspacesByToolId,
   updateTool
-} from "@/db/tools"
-import { convertBlobToBase64 } from "@/lib/blob-to-b64"
-import { Tables, TablesUpdate } from "@/supabase/types"
 import { CollectionFile, ContentType, DataItemType } from "@/types"
 import { FC, useContext, useEffect, useRef, useState } from "react"
 import profile from "react-syntax-highlighter/dist/esm/languages/hljs/profile"
@@ -120,10 +105,10 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
 
   const [isOpen, setIsOpen] = useState(false)
   const [startingWorkspaces, setStartingWorkspaces] = useState<
-    Tables<"workspaces">[]
+    any[]
   >([])
   const [selectedWorkspaces, setSelectedWorkspaces] = useState<
-    Tables<"workspaces">[]
+    any[]
   >([])
 
   // Collections Render State
@@ -136,20 +121,20 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
 
   // Assistants Render State
   const [startingAssistantFiles, setStartingAssistantFiles] = useState<
-    Tables<"files">[]
+    any[]
   >([])
   const [startingAssistantCollections, setStartingAssistantCollections] =
-    useState<Tables<"collections">[]>([])
+    useState<any[]>([])
   const [startingAssistantTools, setStartingAssistantTools] = useState<
-    Tables<"tools">[]
+    any[]
   >([])
   const [selectedAssistantFiles, setSelectedAssistantFiles] = useState<
-    Tables<"files">[]
+    any[]
   >([])
   const [selectedAssistantCollections, setSelectedAssistantCollections] =
-    useState<Tables<"collections">[]>([])
+    useState<any[]>([])
   const [selectedAssistantTools, setSelectedAssistantTools] = useState<
-    Tables<"tools">[]
+    any[]
   >([])
 
   useEffect(() => {
@@ -272,8 +257,8 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
   }
 
   const handleWorkspaceUpdates = async (
-    startingWorkspaces: Tables<"workspaces">[],
-    selectedWorkspaces: Tables<"workspaces">[],
+    startingWorkspaces: any[],
+    selectedWorkspaces: any[],
     itemId: string,
     deleteWorkspaceFn: (
       itemId: string,
@@ -327,7 +312,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
 
   const updateFunctions = {
     chats: updateChat,
-    presets: async (presetId: string, updateState: TablesUpdate<"presets">) => {
+    presets: async (presetId: string, updateState: any) => {
       const updatedPreset = await updatePreset(presetId, updateState)
 
       await handleWorkspaceUpdates(
@@ -341,7 +326,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
 
       return updatedPreset
     },
-    prompts: async (promptId: string, updateState: TablesUpdate<"prompts">) => {
+    prompts: async (promptId: string, updateState: any) => {
       const updatedPrompt = await updatePrompt(promptId, updateState)
 
       await handleWorkspaceUpdates(
@@ -355,7 +340,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
 
       return updatedPrompt
     },
-    files: async (fileId: string, updateState: TablesUpdate<"files">) => {
+    files: async (fileId: string, updateState: any) => {
       const updatedFile = await updateFile(fileId, updateState)
 
       await handleWorkspaceUpdates(
@@ -371,7 +356,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
     },
     collections: async (
       collectionId: string,
-      updateState: TablesUpdate<"assistants">
+      updateState: any
     ) => {
       if (!profile) return
 
@@ -420,7 +405,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
       updateState: {
         assistantId: string
         image: File
-      } & TablesUpdate<"assistants">
+      } & any
     ) => {
       const { image, ...rest } = updateState
 
@@ -541,7 +526,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
 
       return updatedAssistant
     },
-    tools: async (toolId: string, updateState: TablesUpdate<"tools">) => {
+    tools: async (toolId: string, updateState: any) => {
       const updatedTool = await updateTool(toolId, updateState)
 
       await handleWorkspaceUpdates(
@@ -555,7 +540,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
 
       return updatedTool
     },
-    models: async (modelId: string, updateState: TablesUpdate<"models">) => {
+    models: async (modelId: string, updateState: any) => {
       const updatedModel = await updateModel(modelId, updateState)
 
       await handleWorkspaceUpdates(
@@ -606,7 +591,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
     }
   }
 
-  const handleSelectWorkspace = (workspace: Tables<"workspaces">) => {
+  const handleSelectWorkspace = (workspace: any) => {
     setSelectedWorkspaces(prevState => {
       const isWorkspaceAlreadySelected = prevState.find(
         selectedWorkspace => selectedWorkspace.id === workspace.id

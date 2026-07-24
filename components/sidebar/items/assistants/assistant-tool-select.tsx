@@ -6,7 +6,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ChatbotUIContext } from "@/context/context"
-import { Tables } from "@/supabase/types"
 import {
   IconBolt,
   IconChevronDown,
@@ -15,8 +14,8 @@ import {
 import { FC, useContext, useEffect, useRef, useState } from "react"
 
 interface AssistantToolSelectProps {
-  selectedAssistantTools: Tables<"tools">[]
-  onAssistantToolsSelect: (tool: Tables<"tools">) => void
+  selectedAssistantTools: any[]
+  onAssistantToolsSelect: (tool: any) => void
 }
 
 export const AssistantToolSelect: FC<AssistantToolSelectProps> = ({
@@ -39,7 +38,7 @@ export const AssistantToolSelect: FC<AssistantToolSelectProps> = ({
     }
   }, [isOpen])
 
-  const handleToolSelect = (tool: Tables<"tools">) => {
+  const handleToolSelect = (tool: any) => {
     onAssistantToolsSelect(tool)
   }
 
@@ -126,9 +125,9 @@ export const AssistantToolSelect: FC<AssistantToolSelectProps> = ({
 }
 
 interface AssistantToolItemProps {
-  tool: Tables<"tools">
+  tool: any
   selected: boolean
-  onSelect: (tool: Tables<"tools">) => void
+  onSelect: (tool: any) => void
 }
 
 const AssistantToolItem: FC<AssistantToolItemProps> = ({

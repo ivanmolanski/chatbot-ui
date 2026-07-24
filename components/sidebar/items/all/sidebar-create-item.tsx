@@ -7,24 +7,9 @@ import {
   SheetTitle
 } from "@/components/ui/sheet"
 import { ChatbotUIContext } from "@/context/context"
-import { createAssistantCollections } from "@/db/assistant-collections"
-import { createAssistantFiles } from "@/db/assistant-files"
-import { createAssistantTools } from "@/db/assistant-tools"
-import { createAssistant, updateAssistant } from "@/db/assistants"
-import { createChat } from "@/db/chats"
-import { createCollectionFiles } from "@/db/collection-files"
-import { createCollection } from "@/db/collections"
-import { createFileBasedOnExtension } from "@/db/files"
-import { createModel } from "@/db/models"
-import { createPreset } from "@/db/presets"
-import { createPrompt } from "@/db/prompts"
 import {
   getAssistantImageFromStorage,
   uploadAssistantImage
-} from "@/db/storage/assistant-images"
-import { createTool } from "@/db/tools"
-import { convertBlobToBase64 } from "@/lib/blob-to-b64"
-import { Tables, TablesInsert } from "@/supabase/types"
 import { ContentType } from "@/types"
 import { FC, useContext, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -68,7 +53,7 @@ export const SidebarCreateItem: FC<SidebarCreateItemProps> = ({
     presets: createPreset,
     prompts: createPrompt,
     files: async (
-      createState: { file: File } & TablesInsert<"files">,
+      createState: { file: File } & any,
       workspaceId: string
     ) => {
       if (!selectedWorkspace) return
@@ -87,8 +72,8 @@ export const SidebarCreateItem: FC<SidebarCreateItemProps> = ({
     collections: async (
       createState: {
         image: File
-        collectionFiles: TablesInsert<"collection_files">[]
-      } & Tables<"collections">,
+        collectionFiles: any[]
+      } & any,
       workspaceId: string
     ) => {
       const { collectionFiles, ...rest } = createState
@@ -107,10 +92,10 @@ export const SidebarCreateItem: FC<SidebarCreateItemProps> = ({
     assistants: async (
       createState: {
         image: File
-        files: Tables<"files">[]
-        collections: Tables<"collections">[]
-        tools: Tables<"tools">[]
-      } & Tables<"assistants">,
+        files: any[]
+        collections: any[]
+        tools: any[]
+      } & any,
       workspaceId: string
     ) => {
       const { image, files, collections, tools, ...rest } = createState

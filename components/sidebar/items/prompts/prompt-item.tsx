@@ -1,14 +1,12 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { TextareaAutosize } from "@/components/ui/textarea-autosize"
-import { PROMPT_NAME_MAX } from "@/db/limits"
-import { Tables } from "@/supabase/types"
 import { IconPencil } from "@tabler/icons-react"
 import { FC, useState } from "react"
 import { SidebarItem } from "../all/sidebar-display-item"
 
 interface PromptItemProps {
-  prompt: Tables<"prompts">
+  prompt: any
 }
 
 export const PromptItem: FC<PromptItemProps> = ({ prompt }) => {
@@ -31,7 +29,7 @@ export const PromptItem: FC<PromptItemProps> = ({ prompt }) => {
               placeholder="Prompt name..."
               value={name}
               onChange={e => setName(e.target.value)}
-              maxLength={PROMPT_NAME_MAX}
+              maxLength={100}
               onCompositionStart={() => setIsTyping(true)}
               onCompositionEnd={() => setIsTyping(false)}
             />

@@ -1,17 +1,13 @@
 "use client"
 
 import { ChatbotUIContext } from "@/context/context"
-import { getProfileByUserId, updateProfile } from "@/db/profile"
 import {
   getHomeWorkspaceByUserId,
   getWorkspacesByUserId
-} from "@/db/workspaces"
 import {
   fetchHostedModels,
   fetchOpenRouterModels
 } from "@/lib/models/fetch-models"
-import { supabase } from "@/lib/supabase/browser-client"
-import { TablesUpdate } from "@/supabase/types"
 import { useRouter } from "next/navigation"
 import { useContext, useEffect, useState } from "react"
 import { APIStep } from "../../../components/setup/api-step"
@@ -63,7 +59,7 @@ export default function SetupPage() {
 
   useEffect(() => {
     ;(async () => {
-      const session = (await supabase.auth.getSession()).data.session
+      const session = null // Auth delegated to control plane
 
       if (!session) {
         return router.push("/login")
@@ -112,7 +108,7 @@ export default function SetupPage() {
   }
 
   const handleSaveSetupSetting = async () => {
-    const session = (await supabase.auth.getSession()).data.session
+    const session = null // Auth delegated to control plane
     if (!session) {
       return router.push("/login")
     }
@@ -120,7 +116,7 @@ export default function SetupPage() {
     const user = session.user
     const profile = await getProfileByUserId(user.id)
 
-    const updateProfilePayload: TablesUpdate<"profiles"> = {
+    const updateProfilePayload: any = {
       ...profile,
       has_onboarded: true,
       display_name: displayName,

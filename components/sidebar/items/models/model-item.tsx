@@ -1,13 +1,11 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { MODEL_NAME_MAX } from "@/db/limits"
-import { Tables, TablesUpdate } from "@/supabase/types"
 import { IconSparkles } from "@tabler/icons-react"
 import { FC, useState } from "react"
 import { SidebarItem } from "../all/sidebar-display-item"
 
 interface ModelItemProps {
-  model: Tables<"models">
+  model: any
 }
 
 export const ModelItem: FC<ModelItemProps> = ({ model }) => {
@@ -34,7 +32,7 @@ export const ModelItem: FC<ModelItemProps> = ({ model }) => {
           context_length: contextLength,
           model_id: modelId,
           name
-        } as TablesUpdate<"models">
+        } as any
       }
       renderInputs={() => (
         <>
@@ -45,7 +43,7 @@ export const ModelItem: FC<ModelItemProps> = ({ model }) => {
               placeholder="Model name..."
               value={name}
               onChange={e => setName(e.target.value)}
-              maxLength={MODEL_NAME_MAX}
+              maxLength={100}
             />
           </div>
 

@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils"
-import { Tables } from "@/supabase/types"
 import { ChatFile, MessageImage } from "@/types"
 import { IconFileFilled } from "@tabler/icons-react"
 import Image from "next/image"
@@ -9,7 +8,7 @@ import { Dialog, DialogContent } from "./dialog"
 
 interface FilePreviewProps {
   type: "image" | "file" | "file_item"
-  item: ChatFile | MessageImage | Tables<"file_items">
+  item: ChatFile | MessageImage | any
   isOpen: boolean
   onOpenChange: (isOpen: boolean) => void
 }
@@ -48,7 +47,7 @@ export const FilePreview: FC<FilePreviewProps> = ({
               />
             )
           } else if (type === "file_item") {
-            const fileItem = item as Tables<"file_items">
+            const fileItem = item as any
             return (
               <div className="bg-background text-primary h-[50vh] min-w-[700px] overflow-auto whitespace-pre-wrap rounded-xl p-4">
                 <div>{fileItem.content}</div>

@@ -1,4 +1,3 @@
-import { Tables } from "@/supabase/types"
 import { ContentType, DataListType } from "@/types"
 import { FC, useState } from "react"
 import { SidebarCreateButtons } from "./sidebar-create-buttons"
@@ -8,7 +7,7 @@ import { SidebarSearch } from "./sidebar-search"
 interface SidebarContentProps {
   contentType: ContentType
   data: DataListType
-  folders: Tables<"folders">[]
+  folders: any[]
 }
 
 export const SidebarContent: FC<SidebarContentProps> = ({

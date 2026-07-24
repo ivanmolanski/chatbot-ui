@@ -3,8 +3,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { TextareaAutosize } from "@/components/ui/textarea-autosize"
 import { ChatbotUIContext } from "@/context/context"
-import { PROMPT_NAME_MAX } from "@/db/limits"
-import { TablesInsert } from "@/supabase/types"
 import { FC, useContext, useState } from "react"
 
 interface CreatePromptProps {
@@ -35,7 +33,7 @@ export const CreatePrompt: FC<CreatePromptProps> = ({
           user_id: profile.user_id,
           name,
           content
-        } as TablesInsert<"prompts">
+        } as any
       }
       renderInputs={() => (
         <>
@@ -46,7 +44,7 @@ export const CreatePrompt: FC<CreatePromptProps> = ({
               placeholder="Prompt name..."
               value={name}
               onChange={e => setName(e.target.value)}
-              maxLength={PROMPT_NAME_MAX}
+              maxLength={100}
               onCompositionStart={() => setIsTyping(true)}
               onCompositionEnd={() => setIsTyping(false)}
             />

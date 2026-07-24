@@ -1,16 +1,15 @@
 import { ChatbotUIContext } from "@/context/context"
+
+const PROFILE_CONTEXT_MAX = 5000
+const PROFILE_DISPLAY_NAME_MAX = 100
+const PROFILE_USERNAME_MAX = 100
+const PROFILE_USERNAME_MIN = 2
 import {
   PROFILE_CONTEXT_MAX,
   PROFILE_DISPLAY_NAME_MAX,
   PROFILE_USERNAME_MAX,
   PROFILE_USERNAME_MIN
-} from "@/db/limits"
-import { updateProfile } from "@/db/profile"
-import { uploadProfileImage } from "@/db/storage/profile-images"
-import { exportLocalStorageAsJSON } from "@/lib/export-old-data"
 import { fetchOpenRouterModels } from "@/lib/models/fetch-models"
-import { LLM_LIST_MAP } from "@/lib/models/llm/llm-list"
-import { supabase } from "@/lib/supabase/browser-client"
 import { cn } from "@/lib/utils"
 import { OpenRouterLLM } from "@/types"
 import {
@@ -119,7 +118,7 @@ export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
   )
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await fetch('/api/v1/auth/signout', { method: 'POST' })
     router.push("/login")
     router.refresh()
     return
@@ -186,7 +185,7 @@ export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
         providerKey = `${provider}_api_key` as keyof typeof profile
       }
 
-      const models = LLM_LIST_MAP[provider]
+      const models = []
       const envKeyActive = envKeyMap[provider]
 
       if (!envKeyActive) {

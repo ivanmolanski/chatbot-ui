@@ -1,5 +1,4 @@
 import { ChatbotUIContext } from "@/context/context"
-import { Tables } from "@/supabase/types"
 import { ContentType } from "@/types"
 import { FC, useContext } from "react"
 import { SIDEBAR_WIDTH } from "../ui/dashboard"
@@ -42,7 +41,7 @@ export const Sidebar: FC<SidebarProps> = ({ contentType, showSidebar }) => {
   const renderSidebarContent = (
     contentType: ContentType,
     data: any[],
-    folders: Tables<"folders">[]
+    folders: any[]
   ) => {
     return (
       <SidebarContent contentType={contentType} data={data} folders={folders} />

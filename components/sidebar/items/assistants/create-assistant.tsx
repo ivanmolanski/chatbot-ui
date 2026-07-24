@@ -4,8 +4,6 @@ import ImagePicker from "@/components/ui/image-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
-import { ASSISTANT_DESCRIPTION_MAX, ASSISTANT_NAME_MAX } from "@/db/limits"
-import { Tables, TablesInsert } from "@/supabase/types"
 import { FC, useContext, useEffect, useState } from "react"
 import { AssistantRetrievalSelect } from "./assistant-retrieval-select"
 import { AssistantToolSelect } from "./assistant-tool-select"
@@ -36,9 +34,9 @@ export const CreateAssistant: FC<CreateAssistantProps> = ({
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imageLink, setImageLink] = useState("")
   const [selectedAssistantRetrievalItems, setSelectedAssistantRetrievalItems] =
-    useState<Tables<"files">[] | Tables<"collections">[]>([])
+    useState<any[] | any[]>([])
   const [selectedAssistantToolItems, setSelectedAssistantToolItems] = useState<
-    Tables<"tools">[]
+    any[]
   >([])
 
   useEffect(() => {
@@ -56,7 +54,7 @@ export const CreateAssistant: FC<CreateAssistantProps> = ({
   }, [name])
 
   const handleRetrievalItemSelect = (
-    item: Tables<"files"> | Tables<"collections">
+    item: any | any
   ) => {
     setSelectedAssistantRetrievalItems(prevState => {
       const isItemAlreadySelected = prevState.find(
@@ -71,7 +69,7 @@ export const CreateAssistant: FC<CreateAssistantProps> = ({
     })
   }
 
-  const handleToolSelect = (item: Tables<"tools">) => {
+  const handleToolSelect = (item: any) => {
     setSelectedAssistantToolItems(prevState => {
       const isItemAlreadySelected = prevState.find(
         selectedItem => selectedItem.id === item.id
@@ -124,12 +122,12 @@ export const CreateAssistant: FC<CreateAssistantProps> = ({
           embeddings_provider: assistantChatSettings.embeddingsProvider,
           files: selectedAssistantRetrievalItems.filter(item =>
             item.hasOwnProperty("type")
-          ) as Tables<"files">[],
+          ) as any[],
           collections: selectedAssistantRetrievalItems.filter(
             item => !item.hasOwnProperty("type")
-          ) as Tables<"collections">[],
+          ) as any[],
           tools: selectedAssistantToolItems
-        } as TablesInsert<"assistants">
+        } as any
       }
       isOpen={isOpen}
       isTyping={isTyping}
