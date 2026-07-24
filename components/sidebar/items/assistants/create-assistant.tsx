@@ -4,6 +4,10 @@ import ImagePicker from "@/components/ui/image-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
+import {
+  ASSISTANT_NAME_MAX,
+  ASSISTANT_DESCRIPTION_MAX
+} from "@/lib/db/constants"
 import { FC, useContext, useEffect, useState } from "react"
 import { AssistantRetrievalSelect } from "./assistant-retrieval-select"
 import { AssistantToolSelect } from "./assistant-tool-select"
@@ -53,9 +57,7 @@ export const CreateAssistant: FC<CreateAssistantProps> = ({
     })
   }, [name])
 
-  const handleRetrievalItemSelect = (
-    item: any | any
-  ) => {
+  const handleRetrievalItemSelect = (item: any | any) => {
     setSelectedAssistantRetrievalItems(prevState => {
       const isItemAlreadySelected = prevState.find(
         selectedItem => selectedItem.id === item.id

@@ -27,6 +27,7 @@ export const useChatHandler = () => {
     setAbortController,
     chatSettings,
     newMessageImages,
+    setNewMessageImages,
     selectedAssistant,
     chatMessages,
     chatImages,
@@ -169,24 +170,37 @@ export const useChatHandler = () => {
                   fullText += text
                   setFirstTokenReceived(true)
                 }
-              } else if (eventType === "thinking" || eventType === "thinking.delta") {
+              } else if (
+                eventType === "thinking" ||
+                eventType === "thinking.delta"
+              ) {
                 const thinkText = eventData.text || eventData.content || ""
                 if (thinkText && !fullText.includes("🔍")) {
                   fullText = `*${thinkText}*\n\n`
                 }
-              } else if (eventType === "status" || eventType === "status.changed") {
+              } else if (
+                eventType === "status" ||
+                eventType === "status.changed"
+              ) {
                 const msg = eventData.message || eventData.status || ""
                 if (msg) setToolInUse(msg)
-              } else if (eventType === "progress" || eventType === "progress.updated") {
+              } else if (
+                eventType === "progress" ||
+                eventType === "progress.updated"
+              ) {
                 const step = eventData.currentStep || eventData.step || ""
                 if (step) setToolInUse(step)
-              } else if (eventType === "done" || eventType === "execution.completed") {
+              } else if (
+                eventType === "done" ||
+                eventType === "execution.completed"
+              ) {
                 if (eventData.document?.sections) {
                   fullText = eventData.document.sections.join("\n\n")
                 } else if (eventData.result) {
-                  fullText = typeof eventData.result === "string"
-                    ? eventData.result
-                    : JSON.stringify(eventData.result, null, 2)
+                  fullText =
+                    typeof eventData.result === "string"
+                      ? eventData.result
+                      : JSON.stringify(eventData.result, null, 2)
                 }
               } else if (eventType === "error") {
                 throw new Error(eventData.message || "Research failed")

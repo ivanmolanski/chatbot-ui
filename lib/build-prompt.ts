@@ -71,36 +71,40 @@ export async function buildFinalMessages(
   let usedTokens = 0
   usedTokens += PROMPT_TOKENS
 
-  const processedChatMessages = chatMessages.map((chatMessage: any, index: number) => {
-    const nextChatMessage = chatMessages[index + 1]
+  const processedChatMessages = chatMessages.map(
+    (chatMessage: any, index: number) => {
+      const nextChatMessage = chatMessages[index + 1]
 
-    if (nextChatMessage === undefined) {
+      if (nextChatMessage === undefined) {
+        return chatMessage
+      }
+
+      const nextChatMessageFileItems = nextChatMessage.fileItems
+
+      if (nextChatMessageFileItems.length > 0) {
+        const findFileItems = nextChatMessageFileItems
+          .map((fileItemId: string) =>
+            chatFileItems.find(
+              (chatFileItem: any) => chatFileItem.id === fileItemId
+            )
+          )
+          .filter((item: any) => item !== undefined)
+
+        const retrievalText = buildRetrievalText(findFileItems)
+
+        return {
+          message: {
+            ...chatMessage.message,
+            content:
+              `${chatMessage.message.content}\n\n${retrievalText}` as string
+          },
+          fileItems: []
+        }
+      }
+
       return chatMessage
     }
-
-    const nextChatMessageFileItems = nextChatMessage.fileItems
-
-    if (nextChatMessageFileItems.length > 0) {
-      const findFileItems = nextChatMessageFileItems
-        .map((fileItemId: string) =>
-          chatFileItems.find((chatFileItem: any) => chatFileItem.id === fileItemId)
-        )
-        .filter((item: any) => item !== undefined)
-
-      const retrievalText = buildRetrievalText(findFileItems)
-
-      return {
-        message: {
-          ...chatMessage.message,
-          content:
-            `${chatMessage.message.content}\n\n${retrievalText}` as string
-        },
-        fileItems: []
-      }
-    }
-
-    return chatMessage
-  })
+  )
 
   let finalMessages = []
 

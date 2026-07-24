@@ -9,6 +9,17 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 import { ChatbotUIContext } from "@/context/context"
+import {
+  deleteChat,
+  deletePreset,
+  deletePrompt,
+  deleteFile,
+  deleteFileFromStorage,
+  deleteCollection,
+  deleteAssistant,
+  deleteTool,
+  deleteModel
+} from "@/lib/db/delete-functions"
 import { ContentType, DataItemType } from "@/types"
 import { FC, useContext, useRef, useState } from "react"
 

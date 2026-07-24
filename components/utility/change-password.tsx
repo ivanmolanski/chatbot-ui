@@ -24,7 +24,10 @@ export const ChangePassword: FC<ChangePasswordProps> = () => {
   const handleResetPassword = async () => {
     if (!newPassword) return toast.info("Please enter your new password.")
 
-    await fetch('/api/v1/auth/update-password', { method: 'POST', body: JSON.stringify({ password: newPassword }) })
+    await fetch("/api/v1/auth/update-password", {
+      method: "POST",
+      body: JSON.stringify({ password: newPassword })
+    })
 
     toast.success("Password changed successfully.")
 

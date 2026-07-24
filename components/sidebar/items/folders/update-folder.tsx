@@ -73,7 +73,7 @@ export const UpdateFolder: FC<UpdateFolderProps> = ({ folder }) => {
             Cancel
           </Button>
 
-          <Button ref={buttonRef} onClick={handleUpdateChat}>
+          <Button ref={buttonRef} onClick={handleUpdateFolder}>
             Save
           </Button>
         </DialogFooter>

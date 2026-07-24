@@ -39,10 +39,7 @@ export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
     // Per ARCHITECTURE.md: model limits served by control plane capabilities
     setChatSettings({
       ...chatSettings,
-      temperature: Math.min(
-        chatSettings.temperature,
-        DEFAULT_MAX_TEMPERATURE
-      ),
+      temperature: Math.min(chatSettings.temperature, DEFAULT_MAX_TEMPERATURE),
       contextLength: Math.min(
         chatSettings.contextLength,
         DEFAULT_MAX_CONTEXT_LENGTH

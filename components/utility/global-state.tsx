@@ -13,12 +13,7 @@ import { AFDeepResearchAdapter } from "@/lib/ai-platform/adapters/af-deep-resear
 import { AIPlatformClientImpl } from "@/lib/ai-platform/client-impl"
 import type { AIPlatformClient } from "@/lib/ai-platform/client"
 import type { PlatformCapabilities } from "@/lib/ai-platform/domain/types"
-import {
-  ChatMessage,
-  ChatSettings,
-  ChatFile,
-  MessageImage
-} from "@/types"
+import { ChatMessage, ChatSettings, ChatFile, MessageImage } from "@/types"
 import { FC, useEffect, useState, useRef } from "react"
 
 interface GlobalStateProps {
@@ -30,7 +25,9 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
 
   // PLATFORM CLIENT
   const [client, setClient] = useState<AIPlatformClient | null>(null)
-  const [capabilities, setCapabilities] = useState<PlatformCapabilities | null>(null)
+  const [capabilities, setCapabilities] = useState<PlatformCapabilities | null>(
+    null
+  )
 
   // PROFILE STORE
   const [profile, setProfile] = useState<any>(null)
@@ -51,7 +48,9 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
   const [envKeyMap, setEnvKeyMap] = useState<Record<string, string>>({})
   const [availableHostedModels, setAvailableHostedModels] = useState<any[]>([])
   const [availableLocalModels, setAvailableLocalModels] = useState<any[]>([])
-  const [availableOpenRouterModels, setAvailableOpenRouterModels] = useState<any[]>([])
+  const [availableOpenRouterModels, setAvailableOpenRouterModels] = useState<
+    any[]
+  >([])
 
   // WORKSPACE STORE
   const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null)
@@ -83,7 +82,8 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
   // ACTIVE CHAT STORE
   const [isGenerating, setIsGenerating] = useState<boolean>(false)
   const [firstTokenReceived, setFirstTokenReceived] = useState<boolean>(false)
-  const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null)
 
   // CHAT INPUT COMMAND STORE
   const [isPromptPickerOpen, setIsPromptPickerOpen] = useState(false)
@@ -117,26 +117,30 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
   useEffect(() => {
     // Initialize the platform client per ARCHITECTURE.md Phase 2
     // Transport + Adapter pattern — UI never knows the backend
-    const transport = new HTTPTransport({
-      baseUrl: "/api/v1",
-      headers: {}
-    })
+    const transport = new HTTPTransport("/api/v1")
     const adapter = new AFDeepResearchAdapter()
     const platformClient = new AIPlatformClientImpl(transport, adapter)
     clientRef.current = platformClient
     setClient(platformClient)
 
     // Phase 8: Capability negotiation at startup
-    platformClient.getCapabilities().then(caps => {
-      setCapabilities(caps)
-    }).catch(() => {
-      // Backend not available yet — UI works offline
-    })
+    platformClient
+      .getCapabilities()
+      .then(caps => {
+        setCapabilities(caps)
+      })
+      .catch(() => {
+        // Backend not available yet — UI works offline
+      })
   }, [])
 
   return (
     <ChatbotUIContext.Provider
       value={{
+        // PLATFORM
+        capabilities,
+        setCapabilities,
+
         // PROFILE STORE
         profile,
         setProfile,

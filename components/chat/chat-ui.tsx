@@ -67,13 +67,19 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
 
             if (conversation.settings) {
               setChatSettings({
-                model: (conversation.settings.model || "gpt-4-turbo-preview") as LLMID,
-                prompt: conversation.settings.prompt || "You are a helpful AI assistant.",
+                model: (conversation.settings.model ||
+                  "gpt-4-turbo-preview") as LLMID,
+                prompt:
+                  conversation.settings.prompt ||
+                  "You are a helpful AI assistant.",
                 temperature: conversation.settings.temperature ?? 0.5,
                 contextLength: conversation.settings.context_length ?? 4000,
-                includeProfileContext: conversation.settings.include_profile_context ?? true,
-                includeWorkspaceInstructions: conversation.settings.include_workspace_instructions ?? true,
-                embeddingsProvider: (conversation.settings.embeddings_provider || "openai") as "openai" | "local"
+                includeProfileContext:
+                  conversation.settings.include_profile_context ?? true,
+                includeWorkspaceInstructions:
+                  conversation.settings.include_workspace_instructions ?? true,
+                embeddingsProvider: (conversation.settings
+                  .embeddings_provider || "openai") as "openai" | "local"
               })
             }
           }

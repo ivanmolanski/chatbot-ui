@@ -107,7 +107,9 @@ export const PromptPicker: FC<PromptPickerProps> = ({}) => {
     )
 
     const newPrompt: any = {
-      ...prompts.find((prompt: any) => prompt.id === promptVariables[0].promptId),
+      ...prompts.find(
+        (prompt: any) => prompt.id === promptVariables[0].promptId
+      ),
       content: newPromptContent
     }
 

@@ -13,60 +13,53 @@ import { ChatbotUIContext } from "@/context/context"
 import {
   createAssistantCollection,
   deleteAssistantCollection,
-  getAssistantCollectionsByAssistantId
-import {
+  getAssistantCollectionsByAssistantId,
   createAssistantFile,
   deleteAssistantFile,
-  getAssistantFilesByAssistantId
-import {
+  getAssistantFilesByAssistantId,
   createAssistantTool,
   deleteAssistantTool,
-  getAssistantToolsByAssistantId
-import {
+  getAssistantToolsByAssistantId,
   createAssistantWorkspaces,
   deleteAssistantWorkspace,
   getAssistantWorkspacesByAssistantId,
-  updateAssistant
-import {
+  updateChat,
+  updateAssistant,
   createCollectionFile,
   deleteCollectionFile,
-  getCollectionFilesByCollectionId
-import {
+  getCollectionFilesByCollectionId,
   createCollectionWorkspaces,
   deleteCollectionWorkspace,
   getCollectionWorkspacesByCollectionId,
-  updateCollection
-import {
+  updateCollection,
   createFileWorkspaces,
   deleteFileWorkspace,
   getFileWorkspacesByFileId,
-  updateFile
-import {
+  updateFile,
   createModelWorkspaces,
   deleteModelWorkspace,
   getModelWorkspacesByModelId,
-  updateModel
-import {
+  updateModel,
   createPresetWorkspaces,
   deletePresetWorkspace,
   getPresetWorkspacesByPresetId,
-  updatePreset
-import {
+  updatePreset,
   createPromptWorkspaces,
   deletePromptWorkspace,
   getPromptWorkspacesByPromptId,
-  updatePrompt
-import {
-  getAssistantImageFromStorage,
-  uploadAssistantImage
-import {
+  updatePrompt,
   createToolWorkspaces,
   deleteToolWorkspace,
   getToolWorkspacesByToolId,
   updateTool
+} from "@/lib/db/workspace-items"
+import {
+  getAssistantImageFromStorage,
+  uploadAssistantImage,
+  convertBlobToBase64
+} from "@/lib/db/create-functions"
 import { CollectionFile, ContentType, DataItemType } from "@/types"
 import { FC, useContext, useEffect, useRef, useState } from "react"
-import profile from "react-syntax-highlighter/dist/esm/languages/hljs/profile"
 import { toast } from "sonner"
 import { SidebarDeleteItem } from "./sidebar-delete-item"
 
@@ -90,6 +83,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
   const {
     workspaces,
     selectedWorkspace,
+    profile,
     setChats,
     setPresets,
     setPrompts,
@@ -104,12 +98,8 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   const [isOpen, setIsOpen] = useState(false)
-  const [startingWorkspaces, setStartingWorkspaces] = useState<
-    any[]
-  >([])
-  const [selectedWorkspaces, setSelectedWorkspaces] = useState<
-    any[]
-  >([])
+  const [startingWorkspaces, setStartingWorkspaces] = useState<any[]>([])
+  const [selectedWorkspaces, setSelectedWorkspaces] = useState<any[]>([])
 
   // Collections Render State
   const [startingCollectionFiles, setStartingCollectionFiles] = useState<
@@ -120,22 +110,22 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
   >([])
 
   // Assistants Render State
-  const [startingAssistantFiles, setStartingAssistantFiles] = useState<
-    any[]
-  >([])
+  const [startingAssistantFiles, setStartingAssistantFiles] = useState<any[]>(
+    []
+  )
   const [startingAssistantCollections, setStartingAssistantCollections] =
     useState<any[]>([])
-  const [startingAssistantTools, setStartingAssistantTools] = useState<
-    any[]
-  >([])
-  const [selectedAssistantFiles, setSelectedAssistantFiles] = useState<
-    any[]
-  >([])
+  const [startingAssistantTools, setStartingAssistantTools] = useState<any[]>(
+    []
+  )
+  const [selectedAssistantFiles, setSelectedAssistantFiles] = useState<any[]>(
+    []
+  )
   const [selectedAssistantCollections, setSelectedAssistantCollections] =
     useState<any[]>([])
-  const [selectedAssistantTools, setSelectedAssistantTools] = useState<
-    any[]
-  >([])
+  const [selectedAssistantTools, setSelectedAssistantTools] = useState<any[]>(
+    []
+  )
 
   useEffect(() => {
     if (isOpen) {
@@ -192,7 +182,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
     collections: async (collectionId: string) => {
       const collectionFiles =
         await getCollectionFilesByCollectionId(collectionId)
-      setStartingCollectionFiles(collectionFiles.files)
+      setStartingCollectionFiles(collectionFiles)
       setSelectedCollectionFiles([])
     },
     assistants: async (assistantId: string) => {
@@ -354,10 +344,7 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
 
       return updatedFile
     },
-    collections: async (
-      collectionId: string,
-      updateState: any
-    ) => {
+    collections: async (collectionId: string, updateState: any) => {
       if (!profile) return
 
       const { ...rest } = updateState

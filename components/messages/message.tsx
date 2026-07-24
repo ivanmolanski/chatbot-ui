@@ -49,6 +49,7 @@ export const Message: FC<MessageProps> = ({
     isGenerating,
     setIsGenerating,
     firstTokenReceived,
+    availableHostedModels,
     availableLocalModels,
     availableOpenRouterModels,
     chatMessages,
@@ -71,8 +72,7 @@ export const Message: FC<MessageProps> = ({
   const [selectedImage, setSelectedImage] = useState<MessageImage | null>(null)
 
   const [showFileItemPreview, setShowFileItemPreview] = useState(false)
-  const [selectedFileItem, setSelectedFileItem] =
-    useState<any | null>(null)
+  const [selectedFileItem, setSelectedFileItem] = useState<any | null>(null)
 
   const [viewSources, setViewSources] = useState(false)
 
@@ -146,20 +146,22 @@ export const Message: FC<MessageProps> = ({
     image => image.path === selectedAssistant?.image_path
   )?.base64
 
-  const modelDetails = availableHostedModels.find((m: any) => m.modelId === message.model)
+  const modelDetails = availableHostedModels.find(
+    (m: any) => m.modelId === message.model
+  )
 
-  const fileAccumulator: Record<
-    string,
-    {
-      id: string
-      name: string
-      count: number
-      type: string
-      description: string
-    }
-  > = {}
-
-  const fileSummary = fileItems.reduce((acc, fileItem) => {
+  const fileSummary = fileItems.reduce<
+    Record<
+      string,
+      {
+        id: string
+        name: string
+        count: number
+        type: string
+        description: string
+      }
+    >
+  >((acc, fileItem) => {
     const parentFile = files.find(file => file.id === fileItem.file_id)
     if (parentFile) {
       if (!acc[parentFile.id]) {
@@ -175,7 +177,7 @@ export const Message: FC<MessageProps> = ({
       }
     }
     return acc
-  }, fileAccumulator)
+  }, {})
 
   return (
     <div
@@ -375,7 +377,7 @@ export const Message: FC<MessageProps> = ({
         )}
 
         <div className="mt-3 flex flex-wrap gap-2">
-          {message.image_paths.map((path, index) => {
+          {message.image_paths?.map((path: string, index: number) => {
             const item = chatImages.find(image => image.path === path)
 
             return (

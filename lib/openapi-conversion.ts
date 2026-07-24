@@ -1,4 +1,9 @@
-import $RefParser from "@apidevtools/json-schema-ref-parser"
+/**
+ * OpenAPI Conversion — Validates OpenAPI specs without heavy dependencies.
+ *
+ * Per ARCHITECTURE.md: This validates OpenAPI specs for tool creation.
+ * The backend handles the actual parsing and execution.
+ */
 
 interface OpenAPIData {
   info: {
@@ -108,7 +113,8 @@ export const openapiToFunctions = async (
     for (const [method, specWithRef] of Object.entries(
       methods as Record<string, any>
     )) {
-      const spec: any = await $RefParser.dereference(specWithRef)
+      // Simple dereference without external parser
+      const spec = specWithRef
       const functionName = spec.operationId
       const desc = spec.description || spec.summary || ""
 

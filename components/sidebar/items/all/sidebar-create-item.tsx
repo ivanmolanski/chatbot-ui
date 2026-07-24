@@ -8,8 +8,23 @@ import {
 } from "@/components/ui/sheet"
 import { ChatbotUIContext } from "@/context/context"
 import {
+  createChat,
+  createPreset,
+  createPrompt,
+  createFileBasedOnExtension,
+  createCollection,
+  createCollectionFiles,
+  createAssistant,
+  updateAssistant,
+  createAssistantFiles,
+  createAssistantCollections,
+  createAssistantTools,
+  createTool,
+  createModel,
   getAssistantImageFromStorage,
-  uploadAssistantImage
+  uploadAssistantImage,
+  convertBlobToBase64
+} from "@/lib/db/create-functions"
 import { ContentType } from "@/types"
 import { FC, useContext, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -52,10 +67,7 @@ export const SidebarCreateItem: FC<SidebarCreateItemProps> = ({
     chats: createChat,
     presets: createPreset,
     prompts: createPrompt,
-    files: async (
-      createState: { file: File } & any,
-      workspaceId: string
-    ) => {
+    files: async (createState: { file: File } & any, workspaceId: string) => {
       if (!selectedWorkspace) return
 
       const { file, ...rest } = createState
@@ -80,10 +92,12 @@ export const SidebarCreateItem: FC<SidebarCreateItemProps> = ({
 
       const createdCollection = await createCollection(rest, workspaceId)
 
-      const finalCollectionFiles = collectionFiles.map(collectionFile => ({
-        ...collectionFile,
-        collection_id: createdCollection.id
-      }))
+      const finalCollectionFiles = collectionFiles.map(
+        (collectionFile: any) => ({
+          ...collectionFile,
+          collection_id: createdCollection.id
+        })
+      )
 
       await createCollectionFiles(finalCollectionFiles)
 
@@ -130,19 +144,19 @@ export const SidebarCreateItem: FC<SidebarCreateItemProps> = ({
         }
       }
 
-      const assistantFiles = files.map(file => ({
+      const assistantFiles = files.map((file: any) => ({
         user_id: rest.user_id,
         assistant_id: createdAssistant.id,
         file_id: file.id
       }))
 
-      const assistantCollections = collections.map(collection => ({
+      const assistantCollections = collections.map((collection: any) => ({
         user_id: rest.user_id,
         assistant_id: createdAssistant.id,
         collection_id: collection.id
       }))
 
-      const assistantTools = tools.map(tool => ({
+      const assistantTools = tools.map((tool: any) => ({
         user_id: rest.user_id,
         assistant_id: createdAssistant.id,
         tool_id: tool.id

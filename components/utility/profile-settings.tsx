@@ -1,14 +1,15 @@
 import { ChatbotUIContext } from "@/context/context"
-
-const PROFILE_CONTEXT_MAX = 5000
-const PROFILE_DISPLAY_NAME_MAX = 100
-const PROFILE_USERNAME_MAX = 100
-const PROFILE_USERNAME_MIN = 2
 import {
-  PROFILE_CONTEXT_MAX,
-  PROFILE_DISPLAY_NAME_MAX,
-  PROFILE_USERNAME_MAX,
-  PROFILE_USERNAME_MIN
+  uploadProfileImage,
+  updateProfile,
+  exportLocalStorageAsJSON
+} from "@/lib/db/create-functions"
+
+export const PROFILE_CONTEXT_MAX = 5000
+export const PROFILE_DISPLAY_NAME_MAX = 100
+export const PROFILE_USERNAME_MAX = 100
+export const PROFILE_USERNAME_MIN = 2
+
 import { fetchOpenRouterModels } from "@/lib/models/fetch-models"
 import { cn } from "@/lib/utils"
 import { OpenRouterLLM } from "@/types"
@@ -118,7 +119,7 @@ export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
   )
 
   const handleSignOut = async () => {
-    await fetch('/api/v1/auth/signout', { method: 'POST' })
+    await fetch("/api/v1/auth/signout", { method: "POST" })
     router.push("/login")
     router.refresh()
     return
@@ -185,7 +186,7 @@ export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
         providerKey = `${provider}_api_key` as keyof typeof profile
       }
 
-      const models = []
+      const models: any[] = []
       const envKeyActive = envKeyMap[provider]
 
       if (!envKeyActive) {

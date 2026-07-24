@@ -10,10 +10,7 @@ export default function ChangePasswordPage() {
   const router = useRouter()
 
   useEffect(() => {
-    ;(async () => {
-      setLoading(false) // Auth delegated to control plane
-      }
-    })()
+    setLoading(false) // Auth delegated to control plane
   }, [])
 
   if (loading) {

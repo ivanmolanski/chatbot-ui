@@ -89,7 +89,9 @@ export const useSelectFileHandler = () => {
           }
         ])
       } else {
-        toast.error("Unsupported file type. Supported: CSV, DOCX, JSON, MD, PDF, TXT")
+        toast.error(
+          "Unsupported file type. Supported: CSV, DOCX, JSON, MD, PDF, TXT"
+        )
       }
     }
   }

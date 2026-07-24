@@ -3,6 +3,7 @@ import { SidebarCreateItem } from "@/components/sidebar/items/all/sidebar-create
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
+import { FILE_NAME_MAX, FILE_DESCRIPTION_MAX } from "@/lib/db/constants"
 import { FC, useContext, useState } from "react"
 
 interface CreateFileProps {

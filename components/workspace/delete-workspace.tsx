@@ -10,6 +10,7 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 import { ChatbotUIContext } from "@/context/context"
+import { deleteWorkspace } from "@/lib/db/delete-functions"
 import { FC, useContext, useRef, useState } from "react"
 import { Input } from "../ui/input"
 import { useRouter } from "next/navigation"

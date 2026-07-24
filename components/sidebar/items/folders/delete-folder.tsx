@@ -57,7 +57,9 @@ export const DeleteFolder: FC<DeleteFolderProps> = ({
       console.error("Failed to delete folder:", e)
     }
 
-    setFolders((prevState: any) => prevState.filter((c: any) => c.id !== folder.id))
+    setFolders((prevState: any) =>
+      prevState.filter((c: any) => c.id !== folder.id)
+    )
     setShowFolderDialog(false)
 
     const setStateFunction = stateUpdateFunctions[contentType]
@@ -122,10 +124,7 @@ export const DeleteFolder: FC<DeleteFolderProps> = ({
             Delete Folder & Included Items
           </Button>
 
-          <Button
-            variant="destructive"
-            onClick={handleDeleteFolderOnly}
-          >
+          <Button variant="destructive" onClick={handleDeleteFolderOnly}>
             Delete Folder Only
           </Button>
         </DialogFooter>

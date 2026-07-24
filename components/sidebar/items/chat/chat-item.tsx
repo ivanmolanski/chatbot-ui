@@ -14,11 +14,8 @@ interface ChatItemProps {
 }
 
 export const ChatItem: FC<ChatItemProps> = ({ chat }) => {
-  const {
-    selectedWorkspace,
-    selectedChat,
-    assistantImages
-  } = useContext(ChatbotUIContext)
+  const { selectedWorkspace, selectedChat, assistantImages } =
+    useContext(ChatbotUIContext)
 
   const router = useRouter()
   const params = useParams()
@@ -74,7 +71,11 @@ export const ChatItem: FC<ChatItemProps> = ({ chat }) => {
           delayDuration={200}
           display={<div>{chat.model}</div>}
           trigger={
-            <ModelIcon provider={(chat.model?.split("-")[0] || "openai") as any} height={30} width={30} />
+            <ModelIcon
+              provider={(chat.model?.split("-")[0] || "openai") as any}
+              height={30}
+              width={30}
+            />
           }
         />
       )}

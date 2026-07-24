@@ -275,8 +275,7 @@ export const QuickSettings: FC<QuickSettingsProps> = ({}) => {
                   image={
                     contentType === "assistants"
                       ? assistantImages.find(
-                          image =>
-                            image.path === item.image_path
+                          image => image.path === item.image_path
                         )?.base64 || ""
                       : ""
                   }

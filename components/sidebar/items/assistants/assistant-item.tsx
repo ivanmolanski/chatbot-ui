@@ -3,10 +3,13 @@ import ImagePicker from "@/components/ui/image-picker"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
+import {
+  ASSISTANT_NAME_MAX,
+  ASSISTANT_DESCRIPTION_MAX
+} from "@/lib/db/constants"
 import { IconRobotFace } from "@tabler/icons-react"
 import Image from "next/image"
 import { FC, useContext, useEffect, useState } from "react"
-import profile from "react-syntax-highlighter/dist/esm/languages/hljs/profile"
 import { SidebarItem } from "../all/sidebar-display-item"
 import { AssistantRetrievalSelect } from "./assistant-retrieval-select"
 import { AssistantToolSelect } from "./assistant-tool-select"
@@ -16,7 +19,8 @@ interface AssistantItemProps {
 }
 
 export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
-  const { selectedWorkspace, assistantImages } = useContext(ChatbotUIContext)
+  const { selectedWorkspace, assistantImages, profile } =
+    useContext(ChatbotUIContext)
 
   const [name, setName] = useState(assistant.name)
   const [isTyping, setIsTyping] = useState(false)
@@ -41,9 +45,7 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
 
   const handleFileSelect = (
     file: any,
-    setSelectedAssistantFiles: React.Dispatch<
-      React.SetStateAction<any[]>
-    >
+    setSelectedAssistantFiles: React.Dispatch<React.SetStateAction<any[]>>
   ) => {
     setSelectedAssistantFiles(prevState => {
       const isFileAlreadySelected = prevState.find(
@@ -60,9 +62,7 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
 
   const handleCollectionSelect = (
     collection: any,
-    setSelectedAssistantCollections: React.Dispatch<
-      React.SetStateAction<any[]>
-    >
+    setSelectedAssistantCollections: React.Dispatch<React.SetStateAction<any[]>>
   ) => {
     setSelectedAssistantCollections(prevState => {
       const isCollectionAlreadySelected = prevState.find(
@@ -81,9 +81,7 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
 
   const handleToolSelect = (
     tool: any,
-    setSelectedAssistantTools: React.Dispatch<
-      React.SetStateAction<any[]>
-    >
+    setSelectedAssistantTools: React.Dispatch<React.SetStateAction<any[]>>
   ) => {
     setSelectedAssistantTools(prevState => {
       const isToolAlreadySelected = prevState.find(
@@ -139,13 +137,9 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
       }}
       renderInputs={(renderState: {
         startingAssistantFiles: any[]
-        setStartingAssistantFiles: React.Dispatch<
-          React.SetStateAction<any[]>
-        >
+        setStartingAssistantFiles: React.Dispatch<React.SetStateAction<any[]>>
         selectedAssistantFiles: any[]
-        setSelectedAssistantFiles: React.Dispatch<
-          React.SetStateAction<any[]>
-        >
+        setSelectedAssistantFiles: React.Dispatch<React.SetStateAction<any[]>>
         startingAssistantCollections: any[]
         setStartingAssistantCollections: React.Dispatch<
           React.SetStateAction<any[]>
@@ -155,13 +149,9 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
           React.SetStateAction<any[]>
         >
         startingAssistantTools: any[]
-        setStartingAssistantTools: React.Dispatch<
-          React.SetStateAction<any[]>
-        >
+        setStartingAssistantTools: React.Dispatch<React.SetStateAction<any[]>>
         selectedAssistantTools: any[]
-        setSelectedAssistantTools: React.Dispatch<
-          React.SetStateAction<any[]>
-        >
+        setSelectedAssistantTools: React.Dispatch<React.SetStateAction<any[]>>
       }) => (
         <>
           <div className="space-y-1">

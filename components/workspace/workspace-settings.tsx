@@ -2,6 +2,7 @@ import { ChatbotUIContext } from "@/context/context"
 import {
   getWorkspaceImageFromStorage,
   uploadWorkspaceImage
+} from "@/lib/images/storage"
 import { LLMID } from "@/types"
 import { IconHome, IconSettings } from "@tabler/icons-react"
 import { FC, useContext, useEffect, useRef, useState } from "react"
@@ -12,6 +13,27 @@ import ImagePicker from "../ui/image-picker"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { LimitDisplay } from "../ui/limit-display"
+
+const WORKSPACE_INSTRUCTIONS_MAX = 1000
+
+function convertBlobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function updateWorkspace(id: string, data: any): Promise<any> {
+  const res = await fetch(`/api/v1/workspaces/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  })
+  if (!res.ok) throw new Error("Failed to update workspace")
+  return res.json()
+}
 import {
   Sheet,
   SheetContent,

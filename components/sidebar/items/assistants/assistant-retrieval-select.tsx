@@ -16,9 +16,7 @@ import { FC, useContext, useEffect, useRef, useState } from "react"
 
 interface AssistantRetrievalSelectProps {
   selectedAssistantRetrievalItems: any[] | any[]
-  onAssistantRetrievalItemsSelect: (
-    item: any | any
-  ) => void
+  onAssistantRetrievalItemsSelect: (item: any | any) => void
 }
 
 export const AssistantRetrievalSelect: FC<AssistantRetrievalSelectProps> = ({

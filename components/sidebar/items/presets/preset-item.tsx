@@ -2,7 +2,8 @@ import { ModelIcon } from "@/components/models/model-icon"
 import { ChatSettingsForm } from "@/components/ui/chat-settings-form"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FC, useState } from "react"
+import { ChatbotUIContext } from "@/context/context"
+import { FC, useContext, useState } from "react"
 import { SidebarItem } from "../all/sidebar-display-item"
 
 interface PresetItemProps {
@@ -10,6 +11,7 @@ interface PresetItemProps {
 }
 
 export const PresetItem: FC<PresetItemProps> = ({ preset }) => {
+  const { availableHostedModels } = useContext(ChatbotUIContext)
   const [name, setName] = useState(preset.name)
   const [isTyping, setIsTyping] = useState(false)
   const [description, setDescription] = useState(preset.description)
@@ -22,7 +24,9 @@ export const PresetItem: FC<PresetItemProps> = ({ preset }) => {
     includeWorkspaceInstructions: preset.include_workspace_instructions
   })
 
-  const modelDetails = availableHostedModels.find((m: any) => m.modelId === preset.model)
+  const modelDetails = availableHostedModels.find(
+    (m: any) => m.modelId === preset.model
+  )
 
   return (
     <SidebarItem

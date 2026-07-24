@@ -7,6 +7,7 @@ import {
   PopoverTrigger
 } from "@/components/ui/popover"
 import { ChatbotUIContext } from "@/context/context"
+import { createWorkspace } from "@/lib/db/create-functions"
 import useHotkey from "@/lib/hooks/use-hotkey"
 import { IconBuilding, IconHome, IconPlus } from "@tabler/icons-react"
 import { ChevronsUpDown } from "lucide-react"

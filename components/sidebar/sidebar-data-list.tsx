@@ -64,20 +64,10 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
         return <FileItem key={item.id} file={item as any} />
 
       case "collections":
-        return (
-          <CollectionItem
-            key={item.id}
-            collection={item as any}
-          />
-        )
+        return <CollectionItem key={item.id} collection={item as any} />
 
       case "assistants":
-        return (
-          <AssistantItem
-            key={item.id}
-            assistant={item as any}
-          />
-        )
+        return <AssistantItem key={item.id} assistant={item as any} />
 
       case "tools":
         return <ToolItem key={item.id} tool={item as any} />
