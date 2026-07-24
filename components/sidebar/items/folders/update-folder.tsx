@@ -42,13 +42,11 @@ export const UpdateFolder: FC<UpdateFolderProps> = ({ folder }) => {
       } else {
         const errText = await response.text().catch(() => response.statusText)
         console.error("Failed to update folder:", errText)
-        toast.error(`Failed to update folder: ${errText}`)
+        toast.error("Failed to update folder")
       }
     } catch (error) {
       console.error("Failed to update folder:", error)
-      toast.error(
-        `Failed to update folder: ${error instanceof Error ? error.message : String(error)}`
-      )
+      toast.error("Failed to update folder")
     }
   }
 

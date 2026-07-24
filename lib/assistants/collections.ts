@@ -20,24 +20,26 @@ async function proxyRequest<T>(
       ...options,
       signal: controller.signal
     })
-    clearTimeout(timeoutId)
 
     if (!res.ok) {
       const errorText = await res.text().catch(() => res.statusText)
       throw new Error(`Request failed (${res.status}): ${errorText}`)
     }
 
-    if (res.status === 204) {
+    // Handle all successful responses with empty bodies (204, 200, 202, 205, etc.)
+    const text = await res.text()
+    if (!text) {
       return undefined as T
     }
 
-    return res.json()
+    return JSON.parse(text) as T
   } catch (error) {
-    clearTimeout(timeoutId)
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error("Request timed out")
     }
     throw error
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 

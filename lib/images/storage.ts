@@ -27,7 +27,6 @@ async function uploadImage(
       body: formData,
       signal: controller.signal
     })
-    clearTimeout(timeoutId)
 
     if (!res.ok) {
       const errorText = await res.text().catch(() => res.statusText)
@@ -35,13 +34,21 @@ async function uploadImage(
     }
 
     const data = await res.json()
+    if (
+      !data.path ||
+      typeof data.path !== "string" ||
+      data.path.trim() === ""
+    ) {
+      throw new Error("Upload response missing or invalid path")
+    }
     return data.path
   } catch (error) {
-    clearTimeout(timeoutId)
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error("Upload timed out")
     }
     throw error
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 

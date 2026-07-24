@@ -32,10 +32,15 @@ function dereferenceRefs(node: any, root: any, visited: Set<string>): any {
 
   // Only resolve $ref in valid OpenAPI reference locations
   // Skip literal objects under example, default, enum, vendor extensions (x-*)
-  const isReferenceLocation = (key: string, parent: any) => {
+  const isReferenceLocation = (
+    key: string,
+    parent: any,
+    isSchemaContext: boolean
+  ) => {
     if (key === "$ref") return true
     // In schema objects, $ref is a reference keyword
     if (
+      isSchemaContext &&
       parent &&
       typeof parent === "object" &&
       parent.type === "object" &&
@@ -57,13 +62,13 @@ function dereferenceRefs(node: any, root: any, visited: Set<string>): any {
     const newVisited = new Set(visited)
     newVisited.add(refPath)
 
-    const parts = refPath.slice(2).split("/")
+    // Percent-decode the whole fragment first, then split on "/"
+    const fragment = decodeURIComponent(refPath.slice(1))
+    const parts = fragment.split("/")
     let resolved: any = root
     for (const part of parts) {
-      // Percent-decode first, then apply JSON Pointer ~1/~0 decoding
-      const key = decodeURIComponent(part)
-        .replace(/~1/g, "/")
-        .replace(/~0/g, "~")
+      // Apply JSON Pointer ~1/~0 decoding to each token
+      const key = part.replace(/~1/g, "/").replace(/~0/g, "~")
       if (resolved == null || typeof resolved !== "object") {
         throw new Error(`Cannot resolve $ref: ${refPath}`)
       }
@@ -84,12 +89,16 @@ function dereferenceRefs(node: any, root: any, visited: Set<string>): any {
   const result: Record<string, any> = {}
   for (const [key, value] of Object.entries(node)) {
     // Skip dereferencing for literal data locations
-    if (
+    // Preserve Example Object.value, including nested examples.foo.value objects
+    const isLiteralLocation =
       key === "example" ||
       key === "default" ||
       key === "enum" ||
       key.startsWith("x-")
-    ) {
+    const isSchemaContext =
+      key === "schema" ||
+      (node && typeof node === "object" && node.type === "object")
+    if (isLiteralLocation) {
       result[key] = value
     } else {
       result[key] = dereferenceRefs(value, root, new Set(visited))

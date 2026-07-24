@@ -159,63 +159,65 @@ export const useChatHandler = () => {
             const jsonStr = line.slice(6).trim()
             if (!jsonStr || jsonStr === "[DONE]") continue
 
+            let event: any
             try {
-              const event = JSON.parse(jsonStr)
-
-              // AF events have a "type" field and "data" payload
-              const eventType = event.type || ""
-              const eventData = event.data || event
-
-              if (eventType === "token" || eventType === "content.delta") {
-                const text = eventData.text || eventData.content || ""
-                if (text) {
-                  responseText += text
-                  const fullText = thinkingText
-                    ? `*${thinkingText}*\n\n${responseText}`
-                    : responseText
-                  setFirstTokenReceived(true)
-                }
-              } else if (
-                eventType === "thinking" ||
-                eventType === "thinking.delta"
-              ) {
-                const thinkText = eventData.text || eventData.content || ""
-                if (thinkText) {
-                  thinkingText += thinkText
-                  const fullText = `*${thinkingText}*\n\n${responseText}`
-                }
-              } else if (
-                eventType === "status" ||
-                eventType === "status.changed"
-              ) {
-                const msg = eventData.message || eventData.status || ""
-                if (msg) setToolInUse(msg)
-              } else if (
-                eventType === "progress" ||
-                eventType === "progress.updated"
-              ) {
-                const step = eventData.currentStep || eventData.step || ""
-                if (step) setToolInUse(step)
-              } else if (
-                eventType === "done" ||
-                eventType === "execution.completed"
-              ) {
-                if (eventData.document?.sections) {
-                  responseText = eventData.document.sections.join("\n\n")
-                } else if (eventData.result) {
-                  responseText =
-                    typeof eventData.result === "string"
-                      ? eventData.result
-                      : JSON.stringify(eventData.result, null, 2)
-                }
-              } else if (eventType === "error") {
-                throw new Error(eventData.message || "Research failed")
-              }
-            } catch (parseErr) {
+              event = JSON.parse(jsonStr)
+            } catch {
+              // Only handle JSON parse errors - treat as plain text delta
               if (jsonStr && !jsonStr.startsWith("{")) {
                 responseText += jsonStr
                 setFirstTokenReceived(true)
               }
+              continue
+            }
+
+            // AF events have a "type" field and "data" payload
+            const eventType = event.type || ""
+            const eventData = event.data || event
+
+            if (eventType === "token" || eventType === "content.delta") {
+              const text = eventData.text || eventData.content || ""
+              if (text) {
+                responseText += text
+                setFirstTokenReceived(true)
+              }
+            } else if (
+              eventType === "thinking" ||
+              eventType === "thinking.delta"
+            ) {
+              const thinkText = eventData.text || eventData.content || ""
+              if (thinkText) {
+                thinkingText += thinkText
+              }
+            } else if (
+              eventType === "status" ||
+              eventType === "status.changed"
+            ) {
+              const msg = eventData.message || eventData.status || ""
+              if (msg) setToolInUse(msg)
+            } else if (
+              eventType === "progress" ||
+              eventType === "progress.updated"
+            ) {
+              const step = eventData.currentStep || eventData.step || ""
+              if (step) setToolInUse(step)
+            } else if (
+              eventType === "done" ||
+              eventType === "execution.completed"
+            ) {
+              if (
+                Array.isArray(eventData.document?.sections) &&
+                eventData.document.sections.length > 0
+              ) {
+                responseText = eventData.document.sections.join("\n\n")
+              } else if (eventData.result) {
+                responseText =
+                  typeof eventData.result === "string"
+                    ? eventData.result
+                    : JSON.stringify(eventData.result, null, 2)
+              }
+            } else if (eventType === "error") {
+              throw new Error(eventData.message || "Research failed")
             }
           }
 
