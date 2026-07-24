@@ -255,34 +255,22 @@ export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
         return
       }
 
-      const usernameRegex = /^[a-zA-Z0-9_]+$/
-      if (!usernameRegex.test(username)) {
+      try {
+        const response = await fetch(`/api/username/available`, {
+          method: "POST",
+          body: JSON.stringify({ username })
+        })
+        const data = await response.json()
+        setUsernameAvailable(data.isAvailable)
+
+        if (username === profile?.username) {
+          setUsernameAvailable(true)
+        }
+      } catch {
         setUsernameAvailable(false)
-        toast.error(
-          "Username must be letters, numbers, or underscores only - no other characters or spacing allowed."
-        )
-        return
       }
-
-      setLoadingUsername(true)
-
-      const response = await fetch(`/api/username/available`, {
-        method: "POST",
-        body: JSON.stringify({ username })
-      })
-
-      const data = await response.json()
-      const isAvailable = data.isAvailable
-
-      setUsernameAvailable(isAvailable)
-
-      if (username === profile?.username) {
-        setUsernameAvailable(true)
-      }
-
-      setLoadingUsername(false)
-    }, 500),
-    []
+    }, 300),
+    [profile?.username]
   )
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {

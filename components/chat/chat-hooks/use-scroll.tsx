@@ -26,13 +26,13 @@ export const useScroll = () => {
     if (!isGenerating && userScrolled) {
       setUserScrolled(false)
     }
-  }, [isGenerating])
+  }, [isGenerating, userScrolled])
 
   useEffect(() => {
     if (isGenerating && !userScrolled) {
       scrollToBottom()
     }
-  }, [chatMessages])
+  }, [chatMessages, isGenerating, userScrolled])
 
   const handleScroll: UIEventHandler<HTMLDivElement> = useCallback(e => {
     const target = e.target as HTMLDivElement

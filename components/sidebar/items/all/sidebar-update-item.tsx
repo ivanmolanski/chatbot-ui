@@ -128,21 +128,21 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
   )
 
   useEffect(() => {
-    if (isOpen) {
-      const fetchData = async () => {
-        if (workspaces.length > 1) {
-          const workspaces = await fetchSelectedWorkspaces()
-          setStartingWorkspaces(workspaces)
-          setSelectedWorkspaces(workspaces)
-        }
+    if (!isOpen) return
 
-        const fetchDataFunction = fetchDataFunctions[contentType]
-        if (!fetchDataFunction) return
-        await fetchDataFunction(item.id)
+    const fetchData = async () => {
+      if (workspaces.length > 1) {
+        const fetchedWorkspaces = await fetchSelectedWorkspaces()
+        setStartingWorkspaces(fetchedWorkspaces)
+        setSelectedWorkspaces(fetchedWorkspaces)
       }
 
-      fetchData()
+      const fetchDataFunction = fetchDataFunctions[contentType]
+      if (!fetchDataFunction) return
+      await fetchDataFunction(item.id)
     }
+
+    fetchData()
   }, [isOpen])
 
   const renderState = {

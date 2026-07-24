@@ -9,7 +9,7 @@
 import { Dashboard } from "@/components/ui/dashboard"
 import { ChatbotUIContext } from "@/context/context"
 import { useParams, useRouter } from "next/navigation"
-import { ReactNode, useContext, useEffect, useState } from "react"
+import { ReactNode, useCallback, useContext, useEffect, useState } from "react"
 import Loading from "../loading"
 
 interface WorkspaceLayoutProps {
@@ -40,14 +40,31 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    ;(async () => {
-      await fetchWorkspaceData(workspaceId)
-    })()
-  }, [workspaceId])
+  const fetchWorkspaceData = useCallback(
+    async (workspaceId: string) => {
+      setLoading(true)
+
+      // Per ARCHITECTURE.md Phase 1: Data flows from execution
+      // Workspace data is fetched via the control plane through the proxy
+      // For now, set a minimal workspace using the ID from the URL
+      setSelectedWorkspace({
+        id: workspaceId,
+        name: "Workspace",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } as any)
+
+      setLoading(false)
+    },
+    [setSelectedWorkspace]
+  )
 
   useEffect(() => {
-    ;(async () => await fetchWorkspaceData(workspaceId))()
+    fetchWorkspaceData(workspaceId)
+  }, [fetchWorkspaceData, workspaceId])
+
+  useEffect(() => {
+    fetchWorkspaceData(workspaceId)
 
     setUserInput("")
     setChatMessages([])
@@ -61,23 +78,20 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     setNewMessageFiles([])
     setNewMessageImages([])
     setShowFilesDisplay(false)
-  }, [workspaceId])
-
-  const fetchWorkspaceData = async (workspaceId: string) => {
-    setLoading(true)
-
-    // Per ARCHITECTURE.md Phase 1: Data flows from execution
-    // Workspace data is fetched via the control plane through the proxy
-    // For now, set a minimal workspace using the ID from the URL
-    setSelectedWorkspace({
-      id: workspaceId,
-      name: "Workspace",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    } as any)
-
-    setLoading(false)
-  }
+  }, [
+    fetchWorkspaceData,
+    workspaceId,
+    setChatFiles,
+    setChatImages,
+    setChatMessages,
+    setFirstTokenReceived,
+    setIsGenerating,
+    setNewMessageFiles,
+    setNewMessageImages,
+    setSelectedChat,
+    setShowFilesDisplay,
+    setUserInput
+  ])
 
   if (loading) {
     return <Loading />

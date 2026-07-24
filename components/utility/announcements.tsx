@@ -50,7 +50,7 @@ export const Announcements: FC<AnnouncementsProps> = () => {
     // Update state and local storage
     setAnnouncements(updatedAnnouncements)
     localStorage.setItem("announcements", JSON.stringify(updatedAnnouncements))
-  }, [])
+  }, [announcements])
 
   const unreadCount = announcements.filter(a => !a.read).length
 

@@ -100,7 +100,18 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
     } else {
       setLoading(false)
     }
-  }, [])
+  }, [
+    handleFocusChatInput,
+    params.chatid,
+    scrollToBottom,
+    setChatFileItems,
+    setChatFiles,
+    setChatImages,
+    setChatMessages,
+    setChatSettings,
+    setIsAtBottom,
+    setSelectedChat
+  ])
 
   if (loading) {
     return <Loading />
