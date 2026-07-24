@@ -62,8 +62,11 @@ export async function createFileBasedOnExtension(
   formData.append("file", file)
   formData.append("workspace_id", workspaceId)
   formData.append("embeddings_provider", embeddingsProvider)
+  const reserved = new Set(["file", "workspace_id", "embeddings_provider"])
   Object.entries(rest).forEach(([key, value]) => {
-    formData.append(key, String(value))
+    if (!reserved.has(key)) {
+      formData.append(key, String(value))
+    }
   })
 
   const res = await fetch(`${API_BASE}/files`, {

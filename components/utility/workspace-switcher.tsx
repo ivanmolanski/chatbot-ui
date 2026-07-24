@@ -47,18 +47,23 @@ export const WorkspaceSwitcher: FC<WorkspaceSwitcherProps> = ({}) => {
   const handleCreateWorkspace = async () => {
     if (!selectedWorkspace) return
 
+    const defaults = {
+      user_id: selectedWorkspace.user_id || "",
+      default_context_length: selectedWorkspace.default_context_length || 4000,
+      default_model: selectedWorkspace.default_model || "gpt-4",
+      default_prompt: selectedWorkspace.default_prompt || "",
+      default_temperature: selectedWorkspace.default_temperature ?? 0.5,
+      include_profile_context:
+        selectedWorkspace.include_profile_context ?? true,
+      include_workspace_instructions:
+        selectedWorkspace.include_workspace_instructions ?? true
+    }
+
     const createdWorkspace = await createWorkspace({
-      user_id: selectedWorkspace.user_id,
-      default_context_length: selectedWorkspace.default_context_length,
-      default_model: selectedWorkspace.default_model,
-      default_prompt: selectedWorkspace.default_prompt,
-      default_temperature: selectedWorkspace.default_temperature,
+      ...defaults,
       description: "",
       embeddings_provider: "openai",
-      include_profile_context: selectedWorkspace.include_profile_context,
-      include_workspace_instructions:
-        selectedWorkspace.include_workspace_instructions,
-      instructions: selectedWorkspace.instructions,
+      instructions: selectedWorkspace.instructions || "",
       is_home: false,
       name: "New Workspace"
     })

@@ -37,12 +37,14 @@ export const UpdateFolder: FC<UpdateFolderProps> = ({ folder }) => {
         setFolders((prevState: any) =>
           prevState.map((c: any) => (c.id === folder.id ? updatedFolder : c))
         )
+        setShowFolderDialog(false)
+      } else {
+        const errText = await response.text().catch(() => response.statusText)
+        console.error("Failed to update folder:", errText)
       }
     } catch (error) {
       console.error("Failed to update folder:", error)
     }
-
-    setShowFolderDialog(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {

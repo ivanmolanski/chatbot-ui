@@ -24,14 +24,27 @@ export const ChangePassword: FC<ChangePasswordProps> = () => {
   const handleResetPassword = async () => {
     if (!newPassword) return toast.info("Please enter your new password.")
 
-    await fetch("/api/v1/auth/update-password", {
-      method: "POST",
-      body: JSON.stringify({ password: newPassword })
-    })
+    if (newPassword !== confirmPassword) {
+      return toast.error("Passwords do not match.")
+    }
 
-    toast.success("Password changed successfully.")
+    try {
+      const response = await fetch("/api/v1/auth/update-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword })
+      })
 
-    return router.push("/login")
+      if (!response.ok) {
+        const errText = await response.text().catch(() => response.statusText)
+        return toast.error(`Failed to update password: ${errText}`)
+      }
+
+      toast.success("Password changed successfully.")
+      return router.push("/login")
+    } catch (err) {
+      return toast.error("Network error updating password.")
+    }
   }
 
   return (

@@ -3,6 +3,7 @@
  *
  * Per ARCHITECTURE.md: This validates OpenAPI specs for tool creation.
  * The backend handles the actual parsing and execution.
+ * Includes a bounded local $ref dereferencer.
  */
 
 interface OpenAPIData {
@@ -18,6 +19,52 @@ interface OpenAPIData {
     requestInBody?: boolean
   }[]
   functions: any
+}
+
+/**
+ * Bounded local $ref dereferencer for OpenAPI specs.
+ * Resolves JSON References ($ref) within the spec document boundaries.
+ * Throws on circular references or unresolvable paths.
+ */
+function dereferenceRefs(node: any, root: any, visited: Set<string>): any {
+  if (!node || typeof node !== "object") return node
+
+  if (node.$ref) {
+    const refPath = node.$ref as string
+    if (!refPath.startsWith("#/")) {
+      throw new Error(`Cannot resolve external $ref: ${refPath}`)
+    }
+    if (visited.has(refPath)) {
+      throw new Error(`Circular $ref detected: ${refPath}`)
+    }
+    visited.add(refPath)
+
+    const parts = refPath.slice(2).split("/")
+    let resolved: any = root
+    for (const part of parts) {
+      const key = decodeURIComponent(
+        part.replace(/~1/g, "/").replace(/~0/g, "~")
+      )
+      if (resolved == null || typeof resolved !== "object") {
+        throw new Error(`Cannot resolve $ref: ${refPath}`)
+      }
+      resolved = resolved[key]
+    }
+
+    // If the resolved node itself has $ref, keep resolving
+    visited.delete(refPath)
+    return dereferenceRefs(resolved, root, new Set([...visited]))
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(item => dereferenceRefs(item, root, new Set(visited)))
+  }
+
+  const result: Record<string, any> = {}
+  for (const [key, value] of Object.entries(node)) {
+    result[key] = dereferenceRefs(value, root, new Set(visited))
+  }
+  return result
 }
 
 export const validateOpenAPI = async (openapiSpec: any) => {
@@ -113,8 +160,8 @@ export const openapiToFunctions = async (
     for (const [method, specWithRef] of Object.entries(
       methods as Record<string, any>
     )) {
-      // Simple dereference without external parser
-      const spec = specWithRef
+      // Resolve $ref references with a bounded local dereferencer
+      const spec = dereferenceRefs(specWithRef, openapiSpec, new Set())
       const functionName = spec.operationId
       const desc = spec.description || spec.summary || ""
 

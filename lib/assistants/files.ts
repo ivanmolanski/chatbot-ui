@@ -1,30 +1,34 @@
 /**
- * Assistant Files — Stub implementations for legacy file operations.
+ * Assistant Files — Proxy-backed CRUD for assistant-file relations.
  *
- * Per ARCHITECTURE.md Phase 12: These are legacy functions from the
- * Supabase/DB layer. They are stubbed here to prevent build errors.
- * They will be replaced by the AI Platform adapter when the backend
- * supports assistant files natively.
+ * Delegates to the /api/v1 proxy which forwards to the AF Deep Research
+ * control plane. Per ARCHITECTURE.md Phase 12.
  */
 
+const API_BASE = "/api/v1"
+
 export async function createAssistantFile(file: any): Promise<any> {
-  // TODO: Replace with AIPlatformClient.execute({ type: "agent", ... })
-  console.warn("[legacy] createAssistantFile called")
-  return { id: `file_${Date.now()}`, ...file }
+  const res = await fetch(`${API_BASE}/assistant-files`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(file)
+  })
+  if (!res.ok) throw new Error("Failed to create assistant file")
+  return res.json()
 }
 
 export async function deleteAssistantFile(fileId: string): Promise<void> {
-  // TODO: Replace with AIPlatformClient.execute({ type: "agent", ... })
-  console.warn("[legacy] deleteAssistantFile called for:", fileId)
+  const res = await fetch(`${API_BASE}/assistant-files/${fileId}`, {
+    method: "DELETE"
+  })
+  if (!res.ok) throw new Error("Failed to delete assistant file")
 }
 
 export async function getAssistantFilesByAssistantId(
   assistantId: string
 ): Promise<any[]> {
-  // TODO: Replace with AIPlatformClient.execute({ type: "agent", ... })
-  console.warn(
-    "[legacy] getAssistantFilesByAssistantId called for:",
-    assistantId
-  )
-  return []
+  const res = await fetch(`${API_BASE}/assistants/${assistantId}/files`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return Array.isArray(data) ? data : data.files || []
 }

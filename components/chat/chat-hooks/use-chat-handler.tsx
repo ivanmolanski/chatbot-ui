@@ -105,6 +105,7 @@ export const useChatHandler = () => {
     try {
       setUserInput("")
       setIsGenerating(true)
+      setToolInUse("none")
       setIsPromptPickerOpen(false)
       setIsFilePickerOpen(false)
       setNewMessageImages([])
@@ -140,6 +141,8 @@ export const useChatHandler = () => {
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let fullText = ""
+        let thinkingText = ""
+        let responseText = ""
         let buffer = ""
 
         while (true) {
@@ -167,7 +170,10 @@ export const useChatHandler = () => {
               if (eventType === "token" || eventType === "content.delta") {
                 const text = eventData.text || eventData.content || ""
                 if (text) {
-                  fullText += text
+                  responseText += text
+                  fullText = thinkingText
+                    ? `*${thinkingText}*\n\n${responseText}`
+                    : responseText
                   setFirstTokenReceived(true)
                 }
               } else if (
@@ -175,8 +181,9 @@ export const useChatHandler = () => {
                 eventType === "thinking.delta"
               ) {
                 const thinkText = eventData.text || eventData.content || ""
-                if (thinkText && !fullText.includes("🔍")) {
-                  fullText = `*${thinkText}*\n\n`
+                if (thinkText) {
+                  thinkingText += thinkText
+                  fullText = `*${thinkingText}*\n\n${responseText}`
                 }
               } else if (
                 eventType === "status" ||

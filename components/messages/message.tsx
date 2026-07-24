@@ -136,7 +136,9 @@ export const Message: FC<MessageProps> = ({
     ...availableHostedModels,
     ...availableLocalModels,
     ...availableOpenRouterModels
-  ].find(llm => llm.modelId === message.model) as LLM
+  ]
+
+  const modelDetails = MODEL_DATA.find((m: any) => m.modelId === message.model)
 
   const messageAssistantImage = assistantImages.find(
     image => image.assistantId === message.assistant_id
@@ -145,10 +147,6 @@ export const Message: FC<MessageProps> = ({
   const selectedAssistantImage = assistantImages.find(
     image => image.path === selectedAssistant?.image_path
   )?.base64
-
-  const modelDetails = availableHostedModels.find(
-    (m: any) => m.modelId === message.model
-  )
 
   const fileSummary = fileItems.reduce<
     Record<
@@ -228,7 +226,7 @@ export const Message: FC<MessageProps> = ({
                   />
                 ) : (
                   <WithTooltip
-                    display={<div>{MODEL_DATA?.modelName}</div>}
+                    display={<div>{modelDetails?.modelName}</div>}
                     trigger={
                       <ModelIcon
                         provider={modelDetails?.provider || "custom"}
@@ -261,7 +259,7 @@ export const Message: FC<MessageProps> = ({
                       )?.name
                     : selectedAssistant
                       ? selectedAssistant?.name
-                      : MODEL_DATA?.modelName
+                      : modelDetails?.modelName
                   : profile?.display_name ?? profile?.username}
               </div>
             </div>

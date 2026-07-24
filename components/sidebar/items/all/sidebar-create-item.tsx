@@ -94,8 +94,9 @@ export const SidebarCreateItem: FC<SidebarCreateItemProps> = ({
 
       const finalCollectionFiles = collectionFiles.map(
         (collectionFile: any) => ({
-          ...collectionFile,
-          collection_id: createdCollection.id
+          user_id: rest.user_id,
+          collection_id: createdCollection.id,
+          file_id: collectionFile.id || collectionFile.file_id
         })
       )
 

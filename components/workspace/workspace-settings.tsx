@@ -98,80 +98,83 @@ export const WorkspaceSettings: FC<WorkspaceSettingsProps> = ({}) => {
 
     let imagePath = ""
 
-    if (selectedImage) {
-      imagePath = await uploadWorkspaceImage(selectedWorkspace, selectedImage)
+    try {
+      if (selectedImage) {
+        imagePath = await uploadWorkspaceImage(selectedWorkspace, selectedImage)
 
-      const url = (await getWorkspaceImageFromStorage(imagePath)) || ""
+        const url = (await getWorkspaceImageFromStorage(imagePath)) || ""
 
-      if (url) {
-        const response = await fetch(url)
-        const blob = await response.blob()
-        const base64 = await convertBlobToBase64(blob)
+        if (url) {
+          const response = await fetch(url)
+          const blob = await response.blob()
+          const base64 = await convertBlobToBase64(blob)
 
-        setWorkspaceImages(prev => [
-          ...prev,
-          {
-            workspaceId: selectedWorkspace.id,
-            path: imagePath,
-            base64,
-            url
-          }
-        ])
-      }
-    }
-
-    const updatedWorkspace = await updateWorkspace(selectedWorkspace.id, {
-      ...selectedWorkspace,
-      name,
-      description,
-      image_path: imagePath,
-      instructions,
-      default_model: defaultChatSettings.model,
-      default_prompt: defaultChatSettings.prompt,
-      default_temperature: defaultChatSettings.temperature,
-      default_context_length: defaultChatSettings.contextLength,
-      embeddings_provider: defaultChatSettings.embeddingsProvider,
-      include_profile_context: defaultChatSettings.includeProfileContext,
-      include_workspace_instructions:
-        defaultChatSettings.includeWorkspaceInstructions
-    })
-
-    if (
-      defaultChatSettings.model &&
-      defaultChatSettings.prompt &&
-      defaultChatSettings.temperature &&
-      defaultChatSettings.contextLength &&
-      defaultChatSettings.includeProfileContext &&
-      defaultChatSettings.includeWorkspaceInstructions &&
-      defaultChatSettings.embeddingsProvider
-    ) {
-      setChatSettings({
-        model: defaultChatSettings.model as LLMID,
-        prompt: defaultChatSettings.prompt,
-        temperature: defaultChatSettings.temperature,
-        contextLength: defaultChatSettings.contextLength,
-        includeProfileContext: defaultChatSettings.includeProfileContext,
-        includeWorkspaceInstructions:
-          defaultChatSettings.includeWorkspaceInstructions,
-        embeddingsProvider: defaultChatSettings.embeddingsProvider as
-          | "openai"
-          | "local"
-      })
-    }
-
-    setIsOpen(false)
-    setSelectedWorkspace(updatedWorkspace)
-    setWorkspaces(workspaces => {
-      return workspaces.map(workspace => {
-        if (workspace.id === selectedWorkspace.id) {
-          return updatedWorkspace
+          setWorkspaceImages(prev => [
+            ...prev,
+            {
+              workspaceId: selectedWorkspace.id,
+              path: imagePath,
+              base64,
+              url
+            }
+          ])
         }
+      }
 
-        return workspace
+      const updatedWorkspace = await updateWorkspace(selectedWorkspace.id, {
+        ...selectedWorkspace,
+        name,
+        description,
+        image_path: imagePath,
+        instructions,
+        default_model: defaultChatSettings.model,
+        default_prompt: defaultChatSettings.prompt,
+        default_temperature: defaultChatSettings.temperature,
+        default_context_length: defaultChatSettings.contextLength,
+        embeddings_provider: defaultChatSettings.embeddingsProvider,
+        include_profile_context: defaultChatSettings.includeProfileContext,
+        include_workspace_instructions:
+          defaultChatSettings.includeWorkspaceInstructions
       })
-    })
 
-    toast.success("Workspace updated!")
+      if (
+        defaultChatSettings.model &&
+        defaultChatSettings.prompt &&
+        defaultChatSettings.temperature &&
+        defaultChatSettings.contextLength &&
+        defaultChatSettings.includeProfileContext &&
+        defaultChatSettings.includeWorkspaceInstructions &&
+        defaultChatSettings.embeddingsProvider
+      ) {
+        setChatSettings({
+          model: defaultChatSettings.model as LLMID,
+          prompt: defaultChatSettings.prompt,
+          temperature: defaultChatSettings.temperature,
+          contextLength: defaultChatSettings.contextLength,
+          includeProfileContext: defaultChatSettings.includeProfileContext,
+          includeWorkspaceInstructions:
+            defaultChatSettings.includeWorkspaceInstructions,
+          embeddingsProvider: defaultChatSettings.embeddingsProvider as
+            | "openai"
+            | "local"
+        })
+      }
+
+      setIsOpen(false)
+      setSelectedWorkspace(updatedWorkspace)
+      setWorkspaces(workspaces => {
+        return workspaces.map(workspace => {
+          if (workspace.id === selectedWorkspace.id) {
+            return updatedWorkspace
+          }
+          return workspace
+        })
+      })
+
+      toast.success("Workspace updated!")
+    } catch (err) {
+      toast.error("Failed to save workspace settings.")
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {

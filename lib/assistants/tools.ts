@@ -1,30 +1,34 @@
 /**
- * Assistant Tools — Stub implementations for legacy tool operations.
+ * Assistant Tools — Proxy-backed CRUD for assistant-tool relations.
  *
- * Per ARCHITECTURE.md Phase 12: These are legacy functions from the
- * Supabase/DB layer. They are stubbed here to prevent build errors.
- * They will be replaced by the AI Platform adapter when the backend
- * supports assistant tools natively.
+ * Delegates to the /api/v1 proxy which forwards to the AF Deep Research
+ * control plane. Per ARCHITECTURE.md Phase 12.
  */
 
+const API_BASE = "/api/v1"
+
 export async function createAssistantTool(tool: any): Promise<any> {
-  // TODO: Replace with AIPlatformClient.execute({ type: "agent", ... })
-  console.warn("[legacy] createAssistantTool called")
-  return { id: `tool_${Date.now()}`, ...tool }
+  const res = await fetch(`${API_BASE}/assistant-tools`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(tool)
+  })
+  if (!res.ok) throw new Error("Failed to create assistant tool")
+  return res.json()
 }
 
 export async function deleteAssistantTool(toolId: string): Promise<void> {
-  // TODO: Replace with AIPlatformClient.execute({ type: "agent", ... })
-  console.warn("[legacy] deleteAssistantTool called for:", toolId)
+  const res = await fetch(`${API_BASE}/assistant-tools/${toolId}`, {
+    method: "DELETE"
+  })
+  if (!res.ok) throw new Error("Failed to delete assistant tool")
 }
 
 export async function getAssistantToolsByAssistantId(
   assistantId: string
 ): Promise<any[]> {
-  // TODO: Replace with AIPlatformClient.execute({ type: "agent", ... })
-  console.warn(
-    "[legacy] getAssistantToolsByAssistantId called for:",
-    assistantId
-  )
-  return []
+  const res = await fetch(`${API_BASE}/assistants/${assistantId}/tools`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return Array.isArray(data) ? data : data.tools || []
 }
