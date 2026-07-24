@@ -111,76 +111,130 @@ export const useChatHandler = () => {
       const newAbortController = new AbortController()
       setAbortController(newAbortController)
 
-      // Per ARCHITECTURE.md Phase 2: execute() is the single entry point
-      // The AIPlatformClient handles all execution types
-      // For now, use the proxy route which forwards to the control plane
-      const response = await fetch("/api/v1/execute", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream"
-        },
-        body: JSON.stringify({
-          type: "chat",
-          input: { content: messageContent },
-          config: chatSettings || {}
-        }),
-        signal: newAbortController.signal
-      })
+      // AF Deep Research: POST /api/v1/execute/async/{agent}.{reasoner}
+      // Backend expects: {"input": {"query": "..."}}
+      // Returns SSE stream with research events
+      const response = await fetch(
+        "/api/v1/execute/async/meta_deep_research.execute_deep_research",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "text/event-stream"
+          },
+          body: JSON.stringify({
+            input: { query: messageContent }
+          }),
+          signal: newAbortController.signal
+        }
+      )
 
       if (!response.ok) {
-        throw new Error(`Execution failed: ${response.statusText}`)
+        const errorText = await response.text().catch(() => response.statusText)
+        throw new Error(`Execution failed (${response.status}): ${errorText}`)
       }
 
-      // Stream the response
+      // Stream SSE response from AF backend
       if (response.body) {
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
         let fullText = ""
+        let buffer = ""
 
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value, { stream: true })
-          fullText += chunk
+          buffer += decoder.decode(value, { stream: true })
 
-          setFirstTokenReceived(true)
+          // Process SSE events (lines starting with "data: ")
+          const lines = buffer.split("\n")
+          buffer = lines.pop() || "" // Keep incomplete line in buffer
 
-          // Update the assistant message in real-time
-          setChatMessages(prev => {
-            const messages = [...prev]
-            const lastMsg = messages[messages.length - 1]
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue
+            const jsonStr = line.slice(6).trim()
+            if (!jsonStr || jsonStr === "[DONE]") continue
 
-            if (lastMsg?.message.role === "assistant") {
-              messages[messages.length - 1] = {
-                ...lastMsg,
-                message: {
-                  ...lastMsg.message,
-                  content: fullText
+            try {
+              const event = JSON.parse(jsonStr)
+
+              // AF events have a "type" field and "data" payload
+              const eventType = event.type || ""
+              const eventData = event.data || event
+
+              if (eventType === "token" || eventType === "content.delta") {
+                const text = eventData.text || eventData.content || ""
+                if (text) {
+                  fullText += text
+                  setFirstTokenReceived(true)
                 }
+              } else if (eventType === "thinking" || eventType === "thinking.delta") {
+                const thinkText = eventData.text || eventData.content || ""
+                if (thinkText && !fullText.includes("🔍")) {
+                  fullText = `*${thinkText}*\n\n`
+                }
+              } else if (eventType === "status" || eventType === "status.changed") {
+                const msg = eventData.message || eventData.status || ""
+                if (msg) setToolInUse(msg)
+              } else if (eventType === "progress" || eventType === "progress.updated") {
+                const step = eventData.currentStep || eventData.step || ""
+                if (step) setToolInUse(step)
+              } else if (eventType === "done" || eventType === "execution.completed") {
+                if (eventData.document?.sections) {
+                  fullText = eventData.document.sections.join("\n\n")
+                } else if (eventData.result) {
+                  fullText = typeof eventData.result === "string"
+                    ? eventData.result
+                    : JSON.stringify(eventData.result, null, 2)
+                }
+              } else if (eventType === "error") {
+                throw new Error(eventData.message || "Research failed")
               }
-            } else {
-              messages.push({
-                message: {
-                  chat_id: selectedChat?.id || "",
-                  assistant_id: null,
-                  content: fullText,
-                  created_at: new Date().toISOString(),
-                  id: `msg_${Date.now()}`,
-                  image_paths: [],
-                  model: chatSettings?.model || "",
-                  role: "assistant",
-                  sequence_number: messages.length,
-                  updated_at: new Date().toISOString(),
-                  user_id: ""
-                },
-                fileItems: []
-              })
+            } catch (parseErr) {
+              if (jsonStr && !jsonStr.startsWith("{")) {
+                fullText += jsonStr
+                setFirstTokenReceived(true)
+              }
             }
+          }
 
-            return messages
-          })
+          // Update UI with accumulated text
+          if (fullText) {
+            setChatMessages(prev => {
+              const messages = [...prev]
+              const lastMsg = messages[messages.length - 1]
+
+              if (lastMsg?.message.role === "assistant") {
+                messages[messages.length - 1] = {
+                  ...lastMsg,
+                  message: {
+                    ...lastMsg.message,
+                    content: fullText
+                  }
+                }
+              } else {
+                messages.push({
+                  message: {
+                    chat_id: selectedChat?.id || "",
+                    assistant_id: null,
+                    content: fullText,
+                    created_at: new Date().toISOString(),
+                    id: `msg_${Date.now()}`,
+                    image_paths: [],
+                    model: chatSettings?.model || "",
+                    role: "assistant",
+                    sequence_number: messages.length,
+                    updated_at: new Date().toISOString(),
+                    user_id: ""
+                  },
+                  fileItems: []
+                })
+              }
+
+              return messages
+            })
+          }
         }
       }
 
