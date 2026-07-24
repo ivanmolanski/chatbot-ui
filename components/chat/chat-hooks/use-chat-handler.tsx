@@ -140,7 +140,6 @@ export const useChatHandler = () => {
       if (response.body) {
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
-        let fullText = ""
         let thinkingText = ""
         let responseText = ""
         let buffer = ""
@@ -171,7 +170,7 @@ export const useChatHandler = () => {
                 const text = eventData.text || eventData.content || ""
                 if (text) {
                   responseText += text
-                  fullText = thinkingText
+                  const fullText = thinkingText
                     ? `*${thinkingText}*\n\n${responseText}`
                     : responseText
                   setFirstTokenReceived(true)
@@ -183,7 +182,7 @@ export const useChatHandler = () => {
                 const thinkText = eventData.text || eventData.content || ""
                 if (thinkText) {
                   thinkingText += thinkText
-                  fullText = `*${thinkingText}*\n\n${responseText}`
+                  const fullText = `*${thinkingText}*\n\n${responseText}`
                 }
               } else if (
                 eventType === "status" ||
@@ -202,9 +201,9 @@ export const useChatHandler = () => {
                 eventType === "execution.completed"
               ) {
                 if (eventData.document?.sections) {
-                  fullText = eventData.document.sections.join("\n\n")
+                  responseText = eventData.document.sections.join("\n\n")
                 } else if (eventData.result) {
-                  fullText =
+                  responseText =
                     typeof eventData.result === "string"
                       ? eventData.result
                       : JSON.stringify(eventData.result, null, 2)
@@ -214,11 +213,16 @@ export const useChatHandler = () => {
               }
             } catch (parseErr) {
               if (jsonStr && !jsonStr.startsWith("{")) {
-                fullText += jsonStr
+                responseText += jsonStr
                 setFirstTokenReceived(true)
               }
             }
           }
+
+          // Compute fullText from accumulators
+          const fullText = thinkingText
+            ? `*${thinkingText}*\n\n${responseText}`
+            : responseText
 
           // Update UI with accumulated text
           if (fullText) {

@@ -25,9 +25,25 @@ interface OpenAPIData {
  * Bounded local $ref dereferencer for OpenAPI specs.
  * Resolves JSON References ($ref) within the spec document boundaries.
  * Throws on circular references or unresolvable paths.
+ * Only resolves $ref in OpenAPI reference-bearing locations and schema $ref keywords.
  */
 function dereferenceRefs(node: any, root: any, visited: Set<string>): any {
   if (!node || typeof node !== "object") return node
+
+  // Only resolve $ref in valid OpenAPI reference locations
+  // Skip literal objects under example, default, enum, vendor extensions (x-*)
+  const isReferenceLocation = (key: string, parent: any) => {
+    if (key === "$ref") return true
+    // In schema objects, $ref is a reference keyword
+    if (
+      parent &&
+      typeof parent === "object" &&
+      parent.type === "object" &&
+      key === "schema"
+    )
+      return true
+    return false
+  }
 
   if (node.$ref) {
     const refPath = node.$ref as string
@@ -37,23 +53,28 @@ function dereferenceRefs(node: any, root: any, visited: Set<string>): any {
     if (visited.has(refPath)) {
       throw new Error(`Circular $ref detected: ${refPath}`)
     }
-    visited.add(refPath)
+    // Keep refPath in visited for cycle detection during recursive resolution
+    const newVisited = new Set(visited)
+    newVisited.add(refPath)
 
     const parts = refPath.slice(2).split("/")
     let resolved: any = root
     for (const part of parts) {
-      const key = decodeURIComponent(
-        part.replace(/~1/g, "/").replace(/~0/g, "~")
-      )
+      // Percent-decode first, then apply JSON Pointer ~1/~0 decoding
+      const key = decodeURIComponent(part)
+        .replace(/~1/g, "/")
+        .replace(/~0/g, "~")
       if (resolved == null || typeof resolved !== "object") {
+        throw new Error(`Cannot resolve $ref: ${refPath}`)
+      }
+      if (!(key in resolved)) {
         throw new Error(`Cannot resolve $ref: ${refPath}`)
       }
       resolved = resolved[key]
     }
 
-    // If the resolved node itself has $ref, keep resolving
-    visited.delete(refPath)
-    return dereferenceRefs(resolved, root, new Set([...visited]))
+    // Recursively resolve with the same visited set (refPath retained for cycle detection)
+    return dereferenceRefs(resolved, root, newVisited)
   }
 
   if (Array.isArray(node)) {
@@ -62,7 +83,17 @@ function dereferenceRefs(node: any, root: any, visited: Set<string>): any {
 
   const result: Record<string, any> = {}
   for (const [key, value] of Object.entries(node)) {
-    result[key] = dereferenceRefs(value, root, new Set(visited))
+    // Skip dereferencing for literal data locations
+    if (
+      key === "example" ||
+      key === "default" ||
+      key === "enum" ||
+      key.startsWith("x-")
+    ) {
+      result[key] = value
+    } else {
+      result[key] = dereferenceRefs(value, root, new Set(visited))
+    }
   }
   return result
 }

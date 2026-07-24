@@ -6,6 +6,44 @@
  */
 
 const API_BASE = "/api/v1"
+const DEFAULT_TIMEOUT_MS = 30000
+
+async function uploadImage(
+  endpoint: string,
+  formField: string,
+  entityId: string,
+  file: File
+): Promise<string> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
+
+  try {
+    const formData = new FormData()
+    formData.append(formField, file)
+    formData.append(`${formField}_id`, entityId)
+
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      method: "POST",
+      body: formData,
+      signal: controller.signal
+    })
+    clearTimeout(timeoutId)
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => res.statusText)
+      throw new Error(`Upload failed (${res.status}): ${errorText}`)
+    }
+
+    const data = await res.json()
+    return data.path
+  } catch (error) {
+    clearTimeout(timeoutId)
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Upload timed out")
+    }
+    throw error
+  }
+}
 
 export async function getAssistantImageFromStorage(
   path: string
@@ -26,17 +64,7 @@ export async function uploadAssistantImage(
   assistant: { id: string },
   file: File
 ): Promise<string> {
-  const formData = new FormData()
-  formData.append("file", file)
-  formData.append("assistant_id", assistant.id)
-
-  const res = await fetch(`${API_BASE}/images/assistant`, {
-    method: "POST",
-    body: formData
-  })
-  if (!res.ok) throw new Error("Failed to upload assistant image")
-  const data = await res.json()
-  return data.path
+  return uploadImage("/images/assistant", "assistant", assistant.id, file)
 }
 
 export async function getWorkspaceImageFromStorage(
@@ -58,15 +86,5 @@ export async function uploadWorkspaceImage(
   workspace: { id: string },
   file: File
 ): Promise<string> {
-  const formData = new FormData()
-  formData.append("file", file)
-  formData.append("workspace_id", workspace.id)
-
-  const res = await fetch(`${API_BASE}/images/workspace`, {
-    method: "POST",
-    body: formData
-  })
-  if (!res.ok) throw new Error("Failed to upload workspace image")
-  const data = await res.json()
-  return data.path
+  return uploadImage("/images/workspace", "workspace", workspace.id, file)
 }

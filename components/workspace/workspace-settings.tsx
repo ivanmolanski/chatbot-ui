@@ -96,7 +96,7 @@ export const WorkspaceSettings: FC<WorkspaceSettingsProps> = ({}) => {
   const handleSave = async () => {
     if (!selectedWorkspace) return
 
-    let imagePath = ""
+    let imagePath = selectedWorkspace.image_path || ""
 
     try {
       if (selectedImage) {
@@ -137,15 +137,16 @@ export const WorkspaceSettings: FC<WorkspaceSettingsProps> = ({}) => {
           defaultChatSettings.includeWorkspaceInstructions
       })
 
-      if (
-        defaultChatSettings.model &&
-        defaultChatSettings.prompt &&
-        defaultChatSettings.temperature &&
-        defaultChatSettings.contextLength &&
-        defaultChatSettings.includeProfileContext &&
-        defaultChatSettings.includeWorkspaceInstructions &&
-        defaultChatSettings.embeddingsProvider
-      ) {
+      const hasAllSettings =
+        defaultChatSettings.model != null &&
+        defaultChatSettings.prompt != null &&
+        defaultChatSettings.temperature != null &&
+        defaultChatSettings.contextLength != null &&
+        defaultChatSettings.includeProfileContext != null &&
+        defaultChatSettings.includeWorkspaceInstructions != null &&
+        defaultChatSettings.embeddingsProvider != null
+
+      if (hasAllSettings) {
         setChatSettings({
           model: defaultChatSettings.model as LLMID,
           prompt: defaultChatSettings.prompt,

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { ChatbotUIContext } from "@/context/context"
 import { IconEdit } from "@tabler/icons-react"
 import { FC, useContext, useRef, useState } from "react"
+import { toast } from "sonner"
 
 interface UpdateFolderProps {
   folder: any
@@ -41,9 +42,13 @@ export const UpdateFolder: FC<UpdateFolderProps> = ({ folder }) => {
       } else {
         const errText = await response.text().catch(() => response.statusText)
         console.error("Failed to update folder:", errText)
+        toast.error(`Failed to update folder: ${errText}`)
       }
     } catch (error) {
       console.error("Failed to update folder:", error)
+      toast.error(
+        `Failed to update folder: ${error instanceof Error ? error.message : String(error)}`
+      )
     }
   }
 
