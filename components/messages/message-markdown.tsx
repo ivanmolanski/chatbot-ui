@@ -22,7 +22,7 @@ export const MessageMarkdown: FC<MessageMarkdownProps> = ({ content }) => {
             return (
               <Image
                 className="max-w-[67%]"
-                src={src ?? ""}
+                src={(src as string) ?? ""}
                 alt={alt ?? ""}
                 width={500}
                 height={300}
