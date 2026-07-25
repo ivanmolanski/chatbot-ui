@@ -63,6 +63,32 @@ export const useSelectFileHandler = () => {
     availableOpenRouterModels
   ])
 
+  // Check whether the current model supports image uploads
+  const supportsImageInput = useMemo(() => {
+    const modelId = chatSettings?.model
+    if (!modelId) return false
+    const allModels: LLM[] = [
+      ...models.map(m => ({
+        modelId: m.model_id,
+        modelName: m.name,
+        provider: "custom" as const,
+        hostedId: m.id,
+        platformLink: "",
+        imageInput: false
+      })),
+      ...availableHostedModels,
+      ...availableLocalModels,
+      ...availableOpenRouterModels
+    ]
+    return allModels.find(m => m.modelId === modelId)?.imageInput ?? false
+  }, [
+    chatSettings?.model,
+    models,
+    availableHostedModels,
+    availableLocalModels,
+    availableOpenRouterModels
+  ])
+
   const handleSelectDeviceFile = async (file: File) => {
     if (!selectedWorkspace || !chatSettings) return
 
@@ -71,6 +97,12 @@ export const useSelectFileHandler = () => {
 
     if (file) {
       let simplifiedFileType = file.type.split("/")[1]
+
+      // Reject image files when the selected model lacks imageInput support
+      if (file.type.includes("image") && !supportsImageInput) {
+        toast.error("The selected model does not support image uploads.")
+        return
+      }
 
       if (file.type.includes("image")) {
         const reader = new FileReader()

@@ -1,3 +1,4 @@
+import Image from "next/image"
 import React, { FC } from "react"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
@@ -19,7 +20,14 @@ export const MessageMarkdown: FC<MessageMarkdownProps> = ({ content }) => {
           },
           img({ src, alt }) {
             return (
-              <img className="max-w-[67%]" src={src ?? ""} alt={alt ?? ""} />
+              <Image
+                className="max-w-[67%]"
+                src={src ?? ""}
+                alt={alt ?? ""}
+                width={500}
+                height={300}
+                unoptimized
+              />
             )
           },
           code({ node, className, children, ...props }) {

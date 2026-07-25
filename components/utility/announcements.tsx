@@ -11,12 +11,49 @@ import { SIDEBAR_ICON_SIZE } from "../sidebar/sidebar-switcher"
 
 interface AnnouncementsProps {}
 
+// Built-in defaults — source of truth for announcement content.
+// New releases add entries here; localStorage only stores read state.
+const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: "welcome",
+    title: "Welcome to AF Deep Research",
+    content: "Your AI-powered research assistant is ready.",
+    read: false,
+    link: "",
+    date: "2025-01-01"
+  }
+]
+
+// Serialize announcements to read-state-only records for localStorage
+function serializeReadState(
+  list: Announcement[]
+): { id: string; read: boolean }[] {
+  return list.map(({ id, read }) => ({ id, read }))
+}
+
 function loadAnnouncements(): Announcement[] {
   try {
     const stored = localStorage.getItem("announcements")
-    return stored ? JSON.parse(stored) : []
+    if (!stored) return DEFAULT_ANNOUNCEMENTS
+    const parsed = JSON.parse(stored)
+    if (!Array.isArray(parsed)) return DEFAULT_ANNOUNCEMENTS
+    // Validate each entry is a {id, read} record
+    const valid = parsed.filter(
+      (a: any) =>
+        typeof a === "object" &&
+        a !== null &&
+        typeof a.id === "string" &&
+        typeof a.read === "boolean"
+    ) as { id: string; read: boolean }[]
+    if (valid.length === 0) return DEFAULT_ANNOUNCEMENTS
+    // Merge: start from defaults, apply persisted read state by ID
+    const readMap = new Map(valid.map(a => [a.id, a.read]))
+    return DEFAULT_ANNOUNCEMENTS.map(d => ({
+      ...d,
+      read: readMap.get(d.id) ?? d.read
+    }))
   } catch {
-    return []
+    return DEFAULT_ANNOUNCEMENTS
   }
 }
 
@@ -39,32 +76,41 @@ export const Announcements: FC<AnnouncementsProps> = () => {
       isInitialMount.current = false
       return
     }
-    localStorage.setItem("announcements", JSON.stringify(announcements))
+    localStorage.setItem(
+      "announcements",
+      JSON.stringify(serializeReadState(announcements))
+    )
   }, [announcements])
 
   const unreadCount = announcements.filter(a => !a.read).length
 
   const markAsRead = (id: string) => {
-    // Mark announcement as read in local storage and state
     const updatedAnnouncements = announcements.map(a =>
       a.id === id ? { ...a, read: true } : a
     )
     setAnnouncements(updatedAnnouncements)
-    localStorage.setItem("announcements", JSON.stringify(updatedAnnouncements))
+    localStorage.setItem(
+      "announcements",
+      JSON.stringify(serializeReadState(updatedAnnouncements))
+    )
   }
 
   const markAllAsRead = () => {
-    // Mark all announcements as read in local storage and state
     const updatedAnnouncements = announcements.map(a => ({ ...a, read: true }))
     setAnnouncements(updatedAnnouncements)
-    localStorage.setItem("announcements", JSON.stringify(updatedAnnouncements))
+    localStorage.setItem(
+      "announcements",
+      JSON.stringify(serializeReadState(updatedAnnouncements))
+    )
   }
 
   const markAllAsUnread = () => {
-    // Mark all announcements as unread in local storage and state
     const updatedAnnouncements = announcements.map(a => ({ ...a, read: false }))
     setAnnouncements(updatedAnnouncements)
-    localStorage.setItem("announcements", JSON.stringify(updatedAnnouncements))
+    localStorage.setItem(
+      "announcements",
+      JSON.stringify(serializeReadState(updatedAnnouncements))
+    )
   }
 
   return (

@@ -57,9 +57,15 @@ export const CreateAssistant: FC<CreateAssistantProps> = ({
 
       previousPromptParts[0] = name ? `You are ${name}` : ""
 
+      // Filter out empty segments so clearing the name
+      // does not produce a leading ". "
+      const cleanedParts = previousPromptParts.filter(
+        (part: string, idx: number) => idx !== 0 || part !== ""
+      )
+
       return {
         ...prevSettings,
-        prompt: previousPromptParts.join(". ")
+        prompt: cleanedParts.join(". ")
       }
     })
   }, [name])

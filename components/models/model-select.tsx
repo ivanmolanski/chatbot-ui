@@ -1,7 +1,14 @@
 import { ChatbotUIContext } from "@/context/context"
 import { LLM, LLMID, ModelProvider } from "@/types"
 import { IconCheck, IconChevronDown } from "@tabler/icons-react"
-import { FC, useContext, useEffect, useRef, useState } from "react"
+import {
+  FC,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState
+} from "react"
 import { Button } from "../ui/button"
 import {
   DropdownMenu,
@@ -13,17 +20,37 @@ import { Tabs, TabsList, TabsTrigger } from "../ui/tabs"
 import { ModelIcon } from "./model-icon"
 import { ModelOption } from "./model-option"
 
-/** Shared hook: measures triggerRef.offsetWidth when isOpen becomes true */
+/** Shared hook: measures triggerRef width continuously while open */
 function useTriggerWidth(
   triggerRef: React.RefObject<HTMLButtonElement | null>,
   isOpen: boolean
 ): number {
   const [width, setWidth] = useState(0)
-  useEffect(() => {
+
+  // Initial measurement with useLayoutEffect to avoid zero-width flash
+  useLayoutEffect(() => {
     if (isOpen && triggerRef.current) {
-      setWidth(triggerRef.current.offsetWidth)
+      setWidth(triggerRef.current.getBoundingClientRect().width)
     }
   }, [isOpen, triggerRef])
+
+  // Continuous observation via ResizeObserver while open
+  useEffect(() => {
+    if (!isOpen || !triggerRef.current) return
+
+    const el = triggerRef.current
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        setWidth(entry.contentRect.width)
+      }
+    })
+    observer.observe(el)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [isOpen, triggerRef])
+
   return width
 }
 

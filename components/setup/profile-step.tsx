@@ -5,7 +5,7 @@ import {
   IconCircleXFilled,
   IconLoader2
 } from "@tabler/icons-react"
-import { FC, useMemo, useState } from "react"
+import { FC, useMemo, useRef, useState } from "react"
 import { LimitDisplay } from "../ui/limit-display"
 import { toast } from "sonner"
 
