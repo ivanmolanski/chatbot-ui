@@ -9,7 +9,7 @@ import {
 } from "@/lib/db/constants"
 import { IconRobotFace } from "@tabler/icons-react"
 import Image from "next/image"
-import { FC, useContext, useEffect, useRef, useState } from "react"
+import { FC, useContext, useState } from "react"
 import { SidebarItem } from "../all/sidebar-display-item"
 import { AssistantRetrievalSelect } from "./assistant-retrieval-select"
 import { AssistantToolSelect } from "./assistant-tool-select"
@@ -34,24 +34,12 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
     includeWorkspaceInstructions: assistant.include_workspace_instructions
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
-  const [imageLink, setImageLink] = useState("")
-
-  const prevAssistantRef = useRef(assistant)
-  const prevAssistantImagesRef = useRef(assistantImages)
-
-  useEffect(() => {
-    if (
-      prevAssistantRef.current !== assistant ||
-      prevAssistantImagesRef.current !== assistantImages
-    ) {
-      const assistantImage =
-        assistantImages.find(image => image.path === assistant.image_path)
-          ?.base64 || ""
-      setImageLink(assistantImage)
-      prevAssistantRef.current = assistant
-      prevAssistantImagesRef.current = assistantImages
-    }
-  }, [assistant, assistantImages])
+  const [imageSrcOverride, setImageSrcOverride] = useState<string | null>(null)
+  // Prefer local override; fall back to stored assistant image
+  const storedImage =
+    assistantImages.find(image => image.path === assistant.image_path)
+      ?.base64 ?? ""
+  const imageLink = imageSrcOverride ?? storedImage
 
   const handleFileSelect = (
     file: any,
@@ -192,7 +180,7 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
             <ImagePicker
               src={imageLink}
               image={selectedImage}
-              onSrcChange={setImageLink}
+              onSrcChange={setImageSrcOverride}
               onImageChange={setSelectedImage}
               width={100}
               height={100}

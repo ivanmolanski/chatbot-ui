@@ -77,7 +77,11 @@ export function useChatHandler(client: AIPlatformClient): UseChatHandlerReturn {
             const lastMsg = messages[messages.length - 1]
 
             if (lastMsg?.role === "assistant") {
-              lastMsg.content += (event.data as { text: string }).text
+              // Clone the last message to avoid mutation
+              messages[messages.length - 1] = {
+                ...lastMsg,
+                content: lastMsg.content + (event.data as { text: string }).text
+              }
             } else {
               // Create new assistant message
               messages.push({

@@ -622,7 +622,27 @@ export const SidebarUpdateItem: FC<SidebarUpdateItemProps> = ({
               </div>
             )}
 
-            {renderInputs(updateState)}
+            {renderInputs(
+              contentType === "assistants"
+                ? {
+                    startingAssistantFiles,
+                    selectedAssistantFiles,
+                    setSelectedAssistantFiles,
+                    startingAssistantCollections,
+                    selectedAssistantCollections,
+                    setSelectedAssistantCollections,
+                    startingAssistantTools,
+                    selectedAssistantTools,
+                    setSelectedAssistantTools
+                  }
+                : contentType === "collections"
+                  ? {
+                      startingCollectionFiles,
+                      selectedCollectionFiles,
+                      setSelectedCollectionFiles
+                    }
+                  : updateState
+            )}
           </div>
         </div>
 

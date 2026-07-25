@@ -26,15 +26,22 @@ export const useScroll = () => {
     }
   }, [])
 
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const scrollToBottom = useCallback(() => {
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current)
+    }
+
     isAutoScrolling.current = true
 
-    setTimeout(() => {
+    scrollTimeoutRef.current = setTimeout(() => {
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: "instant" })
       }
 
       isAutoScrolling.current = false
+      scrollTimeoutRef.current = null
     }, 100)
   }, [])
 
@@ -48,11 +55,20 @@ export const useScroll = () => {
     const top = target.scrollTop === 0
     setIsAtTop(top)
 
-    if (!bottom && !isAutoScrolling.current) {
-      setUserScrolled(true)
-    } else {
-      setUserScrolled(false)
+    // User interaction (wheel, touch, keyboard) always cancels pending
+    // programmatic scroll and marks userScrolled when away from bottom.
+    // Only programmatic scroll-to-bottom events (isAutoScrolling && at bottom)
+    // are excluded so they don't falsely set userScrolled.
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current)
+      scrollTimeoutRef.current = null
     }
+
+    if (!(isAutoScrolling.current && bottom)) {
+      setUserScrolled(!bottom)
+    }
+
+    isAutoScrolling.current = false
   }, [])
 
   const prevIsGeneratingRef = useRef(isGenerating)

@@ -46,7 +46,7 @@ import { ThemeSwitcher } from "./theme-switcher"
 const debounce = <T extends (...args: any[]) => void>(
   func: T,
   wait: number
-): T => {
+): ((...args: Parameters<T>) => void) => {
   let timeout: NodeJS.Timeout | null = null
 
   return ((...args: any[]) => {

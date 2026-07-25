@@ -13,6 +13,20 @@ import { Tabs, TabsList, TabsTrigger } from "../ui/tabs"
 import { ModelIcon } from "./model-icon"
 import { ModelOption } from "./model-option"
 
+/** Shared hook: measures triggerRef.offsetWidth when isOpen becomes true */
+function useTriggerWidth(
+  triggerRef: React.RefObject<HTMLButtonElement | null>,
+  isOpen: boolean
+): number {
+  const [width, setWidth] = useState(0)
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      setWidth(triggerRef.current.offsetWidth)
+    }
+  }, [isOpen, triggerRef])
+  return width
+}
+
 interface ModelSelectProps {
   selectedModelId: string
   onSelectModel: (modelId: LLMID) => void
@@ -32,23 +46,18 @@ export const ModelSelect: FC<ModelSelectProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const [dropdownWidth, setDropdownWidth] = useState(0)
 
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [tab, setTab] = useState<"hosted" | "local">("hosted")
+
+  const dropdownWidth = useTriggerWidth(triggerRef, isOpen)
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
         inputRef.current?.focus()
       }, 100) // FIX: hacky
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (triggerRef.current) {
-      setDropdownWidth(triggerRef.current.offsetWidth)
     }
   }, [isOpen])
 

@@ -22,7 +22,7 @@ export const MessageMarkdown: FC<MessageMarkdownProps> = ({ content }) => {
               <img className="max-w-[67%]" src={src ?? ""} alt={alt ?? ""} />
             )
           },
-          code({ className, children, ...props }) {
+          code({ node, className, children, ...props }) {
             const childArray = React.Children.toArray(children)
             const firstChild = childArray[0]
             const firstChildAsString = React.isValidElement(firstChild)

@@ -6,6 +6,7 @@
 import { ChatbotUIContext } from "@/context/context"
 import { useContext, useMemo, useState } from "react"
 import { toast } from "sonner"
+import { LLM } from "@/types"
 
 export const ACCEPTED_FILE_TYPES = [
   "text/csv",
@@ -20,6 +21,10 @@ export const useSelectFileHandler = () => {
   const {
     selectedWorkspace,
     chatSettings,
+    models,
+    availableHostedModels,
+    availableLocalModels,
+    availableOpenRouterModels,
     setNewMessageImages,
     setNewMessageFiles,
     setShowFilesDisplay,
@@ -27,15 +32,36 @@ export const useSelectFileHandler = () => {
   } = useContext(ChatbotUIContext)
 
   const filesToAccept = useMemo(() => {
-    const model = chatSettings?.model
-    if (!model) return ACCEPTED_FILE_TYPES
+    const modelId = chatSettings?.model
+    if (!modelId) return ACCEPTED_FILE_TYPES
 
-    // Per ARCHITECTURE.md: model capabilities served by control plane
-    // Allow images when model supports vision (determined by control plane)
-    return model.includes("vision") || model.includes("gpt-4o")
+    // Per ARCHITECTURE.md: model capabilities served by control plane.
+    // Look up the canonical imageInput flag from model metadata instead
+    // of relying on substring heuristics on the model ID.
+    const allModels: LLM[] = [
+      ...models.map(m => ({
+        modelId: m.model_id,
+        modelName: m.name,
+        provider: "custom" as const,
+        hostedId: m.id,
+        platformLink: "",
+        imageInput: false
+      })),
+      ...availableHostedModels,
+      ...availableLocalModels,
+      ...availableOpenRouterModels
+    ]
+    const matched = allModels.find(m => m.modelId === modelId)
+    return matched?.imageInput
       ? `${ACCEPTED_FILE_TYPES},image/*`
       : ACCEPTED_FILE_TYPES
-  }, [chatSettings?.model])
+  }, [
+    chatSettings?.model,
+    models,
+    availableHostedModels,
+    availableLocalModels,
+    availableOpenRouterModels
+  ])
 
   const handleSelectDeviceFile = async (file: File) => {
     if (!selectedWorkspace || !chatSettings) return

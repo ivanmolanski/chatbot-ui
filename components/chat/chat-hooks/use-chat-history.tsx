@@ -1,5 +1,5 @@
 import { ChatbotUIContext } from "@/context/context"
-import { useContext, useEffect, useRef, useState } from "react"
+import { useContext, useState } from "react"
 
 /**
  * Custom hook for handling chat history in the chat component.
@@ -14,30 +14,19 @@ export const useChatHistoryHandler = () => {
     useContext(ChatbotUIContext)
   const userRoleString = "user"
 
+  // Clamp index in render body — no effect needed
   const [messageHistoryIndex, setMessageHistoryIndex] = useState<number>(
     chatMessages.length
   )
-
-  const prevChatMessagesRef = useRef(chatMessages)
-  const prevIsGeneratingRef = useRef(isGenerating)
-
-  useEffect(() => {
-    // If messages get deleted the history index pointed could be out of bounds
-    if (
-      !prevIsGeneratingRef.current &&
-      messageHistoryIndex > prevChatMessagesRef.current.length
-    ) {
-      setMessageHistoryIndex(prevChatMessagesRef.current.length)
-    }
-    prevChatMessagesRef.current = chatMessages
-    prevIsGeneratingRef.current = isGenerating
-  }, [chatMessages, isGenerating, messageHistoryIndex])
+  // Always cap at the current list length, even while generating,
+  // so navigation never indexes beyond the live message list.
+  const clampedIndex = Math.min(messageHistoryIndex, chatMessages.length)
 
   /**
    * Sets the new message content to the previous user message.
    */
   const setNewMessageContentToPreviousUserMessage = () => {
-    let tempIndex = messageHistoryIndex
+    let tempIndex = clampedIndex
     while (
       tempIndex > 0 &&
       chatMessages[tempIndex - 1].message.role !== userRoleString
@@ -61,7 +50,7 @@ export const useChatHistoryHandler = () => {
    * If there is no next user message, it resets the user input and sets the message history index to the end of the chat history.
    */
   const setNewMessageContentToNextUserMessage = () => {
-    let tempIndex = messageHistoryIndex
+    let tempIndex = clampedIndex
     while (
       tempIndex < chatMessages.length - 1 &&
       chatMessages[tempIndex + 1].message.role !== userRoleString

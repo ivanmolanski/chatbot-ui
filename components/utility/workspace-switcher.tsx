@@ -36,14 +36,18 @@ export const WorkspaceSwitcher: FC<WorkspaceSwitcherProps> = ({}) => {
   const [value, setValue] = useState("")
   const [search, setSearch] = useState("")
 
-  const prevSelectedWorkspaceRef = useRef(selectedWorkspace)
+  const prevSelectedWorkspaceRef = useRef<typeof selectedWorkspace>(null)
 
   useHotkey(";", () => setOpen(prevState => !prevState))
 
   useEffect(() => {
     if (!selectedWorkspace) return
 
-    if (prevSelectedWorkspaceRef.current !== selectedWorkspace) {
+    // Always set value when ref is null (first render) or workspace changed
+    if (
+      prevSelectedWorkspaceRef.current === null ||
+      prevSelectedWorkspaceRef.current !== selectedWorkspace
+    ) {
       setValue(selectedWorkspace.id)
       prevSelectedWorkspaceRef.current = selectedWorkspace
     }

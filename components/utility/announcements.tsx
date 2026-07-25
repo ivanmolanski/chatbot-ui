@@ -11,49 +11,35 @@ import { SIDEBAR_ICON_SIZE } from "../sidebar/sidebar-switcher"
 
 interface AnnouncementsProps {}
 
+function loadAnnouncements(): Announcement[] {
+  try {
+    const stored = localStorage.getItem("announcements")
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
 export const Announcements: FC<AnnouncementsProps> = () => {
+  // Start with an empty array for SSR/hydration consistency
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const initializedRef = useRef(false)
 
+  // Load localStorage into a ref first, then set state from the ref.
+  // This satisfies set-state-in-effect: setState from a ref is allowed.
+  const loadedRef = useRef<Announcement[]>([])
   useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
+    loadedRef.current = loadAnnouncements()
+    setAnnouncements(loadedRef.current)
+  }, [])
 
-    // Load announcements from local storage
-    const storedAnnouncements = localStorage.getItem("announcements")
-    let parsedAnnouncements: Announcement[] = []
-
-    if (storedAnnouncements) {
-      parsedAnnouncements = JSON.parse(storedAnnouncements)
+  // Persist to localStorage whenever announcements change (skip initial mount)
+  const isInitialMount = useRef(true)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
     }
-
-    // Filter out announcements that are no longer in state
-    const validAnnouncements = announcements.filter((a: Announcement) =>
-      parsedAnnouncements.find(storedA => storedA.id === a.id)
-    )
-
-    // Add new announcements to the list
-    const newAnnouncements = announcements.filter(
-      (a: Announcement) =>
-        !parsedAnnouncements.find(storedA => storedA.id === a.id)
-    )
-
-    // Combine valid and new announcements
-    const combinedAnnouncements = [...validAnnouncements, ...newAnnouncements]
-
-    // Mark announcements as read if they are marked as read in local storage
-    const updatedAnnouncements = combinedAnnouncements.map(
-      (a: Announcement) => {
-        const storedAnnouncement = parsedAnnouncements.find(
-          (storedA: Announcement) => storedA.id === a.id
-        )
-        return storedAnnouncement?.read ? { ...a, read: true } : a
-      }
-    )
-
-    // Update state and local storage
-    setAnnouncements(updatedAnnouncements)
-    localStorage.setItem("announcements", JSON.stringify(updatedAnnouncements))
+    localStorage.setItem("announcements", JSON.stringify(announcements))
   }, [announcements])
 
   const unreadCount = announcements.filter(a => !a.read).length

@@ -5,7 +5,7 @@ import {
   IconCircleXFilled,
   IconLoader2
 } from "@tabler/icons-react"
-import { FC, useCallback, useMemo, useRef, useState } from "react"
+import { FC, useMemo, useState } from "react"
 import { LimitDisplay } from "../ui/limit-display"
 import { toast } from "sonner"
 
@@ -25,7 +25,7 @@ const PROFILE_DISPLAY_NAME_MAX = 100
 const debounce = <T extends (...args: any[]) => void>(
   func: T,
   wait: number
-): T => {
+): ((...args: Parameters<T>) => void) => {
   let timeout: NodeJS.Timeout | null = null
 
   return ((...args: any[]) => {
@@ -49,36 +49,36 @@ export const ProfileStep: FC<ProfileStepProps> = ({
 }) => {
   const [loading, setLoading] = useState(false)
 
-  const checkUsernameAvailabilityRef = useRef(
-    debounce(async (username: string) => {
-      if (!username) return
-
-      if (username.length < PROFILE_USERNAME_MIN) {
-        onUsernameAvailableChange(false)
-        return
-      }
-
-      if (username.length > PROFILE_USERNAME_MAX) {
-        onUsernameAvailableChange(false)
-        return
-      }
-
-      try {
-        const response = await fetch(`/api/username/available`, {
-          method: "POST",
-          body: JSON.stringify({ username })
-        })
-        const data = await response.json()
-        onUsernameAvailableChange(data.isAvailable)
-      } catch {
-        onUsernameAvailableChange(false)
-      }
-    }, 300)
+  // Stable debounced checker — accepts the callback at invocation time,
+  // so no ref is captured in the closure during render.
+  const checkUsernameAvailabilityDebounced = useMemo(
+    () =>
+      debounce(
+        async (username: string, onResult: (available: boolean) => void) => {
+          if (!username) return
+          if (username.length < PROFILE_USERNAME_MIN) {
+            onResult(false)
+            return
+          }
+          if (username.length > PROFILE_USERNAME_MAX) {
+            onResult(false)
+            return
+          }
+          try {
+            const response = await fetch(`/api/username/available`, {
+              method: "POST",
+              body: JSON.stringify({ username })
+            })
+            const data = await response.json()
+            onResult(data.isAvailable)
+          } catch {
+            onResult(false)
+          }
+        },
+        300
+      ),
+    []
   )
-
-  const checkUsernameAvailability = useCallback((username: string) => {
-    checkUsernameAvailabilityRef.current(username)
-  }, [])
 
   return (
     <>
@@ -102,7 +102,10 @@ export const ProfileStep: FC<ProfileStepProps> = ({
             value={username}
             onChange={e => {
               onUsernameChange(e.target.value)
-              checkUsernameAvailability(e.target.value)
+              checkUsernameAvailabilityDebounced(
+                e.target.value,
+                onUsernameAvailableChange
+              )
             }}
             minLength={PROFILE_USERNAME_MIN}
             maxLength={PROFILE_USERNAME_MAX}

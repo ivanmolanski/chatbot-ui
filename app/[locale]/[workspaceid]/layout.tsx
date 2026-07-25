@@ -66,11 +66,11 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     [setSelectedWorkspace]
   )
 
-  const hasFetchedRef = useRef(false)
+  const fetchedWorkspaceIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!hasFetchedRef.current) {
-      hasFetchedRef.current = true
+    if (fetchedWorkspaceIdRef.current !== workspaceId) {
+      fetchedWorkspaceIdRef.current = workspaceId
       fetchWorkspaceData(workspaceId)
     }
   }, [fetchWorkspaceData, workspaceId])

@@ -111,6 +111,7 @@ export const Message: FC<MessageProps> = ({
   }
 
   const handleStartEdit = () => {
+    setEditedMessage(message.content)
     onStartEdit(message)
   }
 

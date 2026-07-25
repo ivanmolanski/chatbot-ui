@@ -43,23 +43,25 @@ export const CreateAssistant: FC<CreateAssistantProps> = ({
     any[]
   >([])
 
-  const prevNameRef = useRef(name)
+  const hasSetNameRef = useRef(false)
 
   useEffect(() => {
-    if (prevNameRef.current !== name) {
-      setAssistantChatSettings(prevSettings => {
-        const previousPrompt = prevSettings.prompt || ""
-        const previousPromptParts = previousPrompt.split(". ")
-
-        previousPromptParts[0] = name ? `You are ${name}` : ""
-
-        return {
-          ...prevSettings,
-          prompt: previousPromptParts.join(". ")
-        }
-      })
-      prevNameRef.current = name
+    if (!hasSetNameRef.current) {
+      hasSetNameRef.current = true
+      return
     }
+
+    setAssistantChatSettings(prevSettings => {
+      const previousPrompt = prevSettings.prompt || ""
+      const previousPromptParts = previousPrompt.split(". ")
+
+      previousPromptParts[0] = name ? `You are ${name}` : ""
+
+      return {
+        ...prevSettings,
+        prompt: previousPromptParts.join(". ")
+      }
+    })
   }, [name])
 
   const handleRetrievalItemSelect = (item: any | any) => {
