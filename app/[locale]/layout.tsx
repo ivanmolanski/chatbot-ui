@@ -8,6 +8,7 @@
  * Auth is handled by the proxy (Phase 11) — API key injected server-side.
  */
 
+import { GlobalState } from "@/components/utility/global-state"
 import { Toaster } from "@/components/ui/sonner"
 import { Providers } from "@/components/utility/providers"
 import TranslationsProvider from "@/components/utility/translations-provider"
@@ -82,16 +83,18 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers attribute="class" defaultTheme="dark">
-          <TranslationsProvider
-            namespaces={i18nNamespaces}
-            locale={locale}
-            resources={resources}
-          >
-            <Toaster richColors position="top-center" duration={3000} />
-            <div className="bg-background text-foreground flex h-dvh flex-col items-center overflow-x-auto">
-              {children}
-            </div>
-          </TranslationsProvider>
+          <GlobalState>
+            <TranslationsProvider
+              namespaces={i18nNamespaces}
+              locale={locale}
+              resources={resources}
+            >
+              <Toaster richColors position="top-center" duration={3000} />
+              <div className="bg-background text-foreground flex h-dvh flex-col items-center overflow-x-auto">
+                {children}
+              </div>
+            </TranslationsProvider>
+          </GlobalState>
         </Providers>
       </body>
     </html>
