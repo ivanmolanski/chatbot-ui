@@ -24,9 +24,6 @@ import { ChatRetrievalSettings } from "./chat-retrieval-settings"
 interface ChatFilesDisplayProps {}
 
 export const ChatFilesDisplay: FC<ChatFilesDisplayProps> = ({}) => {
-  useHotkey("f", () => setShowFilesDisplay(prev => !prev))
-  useHotkey("e", () => setUseRetrieval(prev => !prev))
-
   const {
     files,
     newMessageImages,
@@ -41,6 +38,9 @@ export const ChatFilesDisplay: FC<ChatFilesDisplayProps> = ({}) => {
     setChatFiles,
     setUseRetrieval
   } = useContext(ChatbotUIContext)
+
+  useHotkey("f", () => setShowFilesDisplay(prev => !prev))
+  useHotkey("e", () => setUseRetrieval(prev => !prev))
 
   const [selectedFile, setSelectedFile] = useState<ChatFile | null>(null)
   const [selectedImage, setSelectedImage] = useState<MessageImage | null>(null)

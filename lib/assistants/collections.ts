@@ -11,7 +11,7 @@ const DEFAULT_TIMEOUT_MS = 15000
 async function proxyRequest<T>(
   path: string,
   options: RequestInit = {}
-): Promise<T> {
+): Promise<T | undefined> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
 
@@ -28,8 +28,8 @@ async function proxyRequest<T>(
 
     // Handle all successful responses with empty bodies (204, 200, 202, 205, etc.)
     const text = await res.text()
-    if (!text) {
-      return undefined as T
+    if (!text.trim()) {
+      return undefined
     }
 
     return JSON.parse(text) as T
@@ -44,11 +44,12 @@ async function proxyRequest<T>(
 }
 
 export async function createAssistantCollection(collection: any): Promise<any> {
-  return proxyRequest<any>("/assistant-collections", {
+  const result = await proxyRequest<any>("/assistant-collections", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(collection)
   })
+  return result as any
 }
 
 export async function deleteAssistantCollection(

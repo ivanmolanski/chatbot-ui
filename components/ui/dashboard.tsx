@@ -20,8 +20,6 @@ interface DashboardProps {
 }
 
 export const Dashboard: FC<DashboardProps> = ({ children }) => {
-  useHotkey("s", () => setShowSidebar(prevState => !prevState))
-
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -36,6 +34,8 @@ export const Dashboard: FC<DashboardProps> = ({ children }) => {
     localStorage.getItem("showSidebar") === "true"
   )
   const [isDragging, setIsDragging] = useState(false)
+
+  useHotkey("s", () => setShowSidebar(prevState => !prevState))
 
   const onFileDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()

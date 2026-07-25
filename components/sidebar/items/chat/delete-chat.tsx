@@ -19,14 +19,14 @@ interface DeleteChatProps {
 }
 
 export const DeleteChat: FC<DeleteChatProps> = ({ chat }) => {
-  useHotkey("Backspace", () => setShowChatDialog(true))
-
   const { setChats } = useContext(ChatbotUIContext)
   const { handleNewChat } = useChatHandler()
 
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   const [showChatDialog, setShowChatDialog] = useState(false)
+
+  useHotkey("Backspace", () => setShowChatDialog(true))
 
   const handleDeleteChat = async () => {
     try {

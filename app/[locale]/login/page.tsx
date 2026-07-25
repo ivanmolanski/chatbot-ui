@@ -17,8 +17,10 @@ export const metadata: Metadata = {
 export default async function Login({
   searchParams
 }: {
-  searchParams: { message: string }
+  searchParams: Promise<{ message: string }>
 }) {
+  const { message } = await searchParams
+
   const signIn = async (formData: FormData) => {
     "use server"
 
@@ -63,9 +65,9 @@ export default async function Login({
           Start Research
         </button>
 
-        {searchParams?.message && (
+        {message && (
           <p className="bg-foreground/10 text-foreground mt-4 p-4 text-center">
-            {searchParams.message}
+            {message}
           </p>
         )}
       </form>

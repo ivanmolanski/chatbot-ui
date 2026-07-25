@@ -13,16 +13,16 @@ import { useTheme } from "next-themes"
 import { useContext } from "react"
 
 export default function ChatPage() {
-  useHotkey("o", () => handleNewChat())
-  useHotkey("l", () => {
-    handleFocusChatInput()
-  })
-
   const { chatMessages } = useContext(ChatbotUIContext)
 
   const { handleNewChat, handleFocusChatInput } = useChatHandler()
 
   const { theme } = useTheme()
+
+  useHotkey("o", () => handleNewChat())
+  useHotkey("l", () => {
+    handleFocusChatInput()
+  })
 
   return (
     <>

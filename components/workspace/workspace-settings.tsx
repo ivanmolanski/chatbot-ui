@@ -84,13 +84,24 @@ export const WorkspaceSettings: FC<WorkspaceSettingsProps> = ({}) => {
     embeddingsProvider: selectedWorkspace?.embeddings_provider
   })
 
+  const prevWorkspaceImagesRef = useRef(workspaceImages)
+  const prevSelectedWorkspaceImagePathRef = useRef(
+    selectedWorkspace?.image_path
+  )
+  const prevImageLinkRef = useRef("")
+
   useEffect(() => {
     const workspaceImage =
       workspaceImages.find(
         image => image.path === selectedWorkspace?.image_path
       )?.base64 || ""
 
-    setImageLink(workspaceImage)
+    if (prevImageLinkRef.current !== workspaceImage) {
+      setImageLink(workspaceImage)
+      prevImageLinkRef.current = workspaceImage
+    }
+    prevWorkspaceImagesRef.current = workspaceImages
+    prevSelectedWorkspaceImagePathRef.current = selectedWorkspace?.image_path
   }, [workspaceImages, selectedWorkspace?.image_path])
 
   const handleSave = async () => {
@@ -156,8 +167,7 @@ export const WorkspaceSettings: FC<WorkspaceSettingsProps> = ({}) => {
           includeWorkspaceInstructions:
             defaultChatSettings.includeWorkspaceInstructions,
           embeddingsProvider: defaultChatSettings.embeddingsProvider as
-            | "openai"
-            | "local"
+            "openai" | "local"
         })
       }
 

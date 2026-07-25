@@ -67,30 +67,34 @@ async function proxyRequest(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string[] } }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
-  return proxyRequest(request, params.slug, "GET")
+  const { slug } = await params
+  return proxyRequest(request, slug, "GET")
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string[] } }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
-  return proxyRequest(request, params.slug, "POST")
+  const { slug } = await params
+  return proxyRequest(request, slug, "POST")
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { slug: string[] } }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
-  return proxyRequest(request, params.slug, "PUT")
+  const { slug } = await params
+  return proxyRequest(request, slug, "PUT")
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slug: string[] } }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
-  return proxyRequest(request, params.slug, "DELETE")
+  const { slug } = await params
+  return proxyRequest(request, slug, "DELETE")
 }
 
 export const runtime = "nodejs"

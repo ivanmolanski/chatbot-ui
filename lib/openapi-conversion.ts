@@ -62,8 +62,8 @@ function dereferenceRefs(node: any, root: any, visited: Set<string>): any {
     const newVisited = new Set(visited)
     newVisited.add(refPath)
 
-    // Percent-decode the whole fragment first, then split on "/"
-    const fragment = decodeURIComponent(refPath.slice(1))
+    // Percent-decode the whole fragment first (skip "#/"), then split on "/"
+    const fragment = decodeURIComponent(refPath.slice(2))
     const parts = fragment.split("/")
     let resolved: any = root
     for (const part of parts) {

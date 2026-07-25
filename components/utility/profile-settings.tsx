@@ -43,6 +43,23 @@ import { TextareaAutosize } from "../ui/textarea-autosize"
 import { WithTooltip } from "../ui/with-tooltip"
 import { ThemeSwitcher } from "./theme-switcher"
 
+const debounce = <T extends (...args: any[]) => void>(
+  func: T,
+  wait: number
+): T => {
+  let timeout: NodeJS.Timeout | null = null
+
+  return ((...args: any[]) => {
+    const later = () => {
+      if (timeout) clearTimeout(timeout)
+      func(...args)
+    }
+
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }) as T
+}
+
 interface ProfileSettingsProps {}
 
 export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
@@ -227,21 +244,7 @@ export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
     setIsOpen(false)
   }
 
-  const debounce = (func: (...args: any[]) => void, wait: number) => {
-    let timeout: NodeJS.Timeout | null
-
-    return (...args: any[]) => {
-      const later = () => {
-        if (timeout) clearTimeout(timeout)
-        func(...args)
-      }
-
-      if (timeout) clearTimeout(timeout)
-      timeout = setTimeout(later, wait)
-    }
-  }
-
-  const checkUsernameAvailability = useCallback(
+  const checkUsernameAvailabilityRef = useRef(
     debounce(async (username: string) => {
       if (!username) return
 
@@ -269,9 +272,12 @@ export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
       } catch {
         setUsernameAvailable(false)
       }
-    }, 300),
-    [profile?.username]
+    }, 300)
   )
+
+  const checkUsernameAvailability = useCallback((username: string) => {
+    checkUsernameAvailabilityRef.current(username)
+  }, [])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter") {

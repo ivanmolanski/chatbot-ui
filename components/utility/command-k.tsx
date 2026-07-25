@@ -8,14 +8,14 @@ import { TextareaAutosize } from "../ui/textarea-autosize"
 interface CommandKProps {}
 
 export const CommandK: FC<CommandKProps> = ({}) => {
-  useHotkey("k", () => setIsOpen(prevState => !prevState))
-
   const { profile } = useContext(ChatbotUIContext)
 
   const [isOpen, setIsOpen] = useState(false)
   const [value, setValue] = useState("")
   const [loading, setLoading] = useState(false)
   const [content, setContent] = useState("")
+
+  useHotkey("k", () => setIsOpen(prevState => !prevState))
 
   const handleCommandK = async () => {
     setLoading(true)

@@ -2,7 +2,7 @@ import { ChatbotUIContext } from "@/context/context"
 import { cn } from "@/lib/utils"
 import { ContentType, DataItemType } from "@/types"
 import { useRouter } from "next/navigation"
-import { FC, useContext, useRef, useState } from "react"
+import { FC, JSX, useContext, useRef, useState } from "react"
 import { SidebarUpdateItem } from "./sidebar-update-item"
 
 interface SidebarItemProps {

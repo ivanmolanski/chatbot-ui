@@ -246,10 +246,7 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
                     const sortedData = getSortedData(
                       dataWithoutFolders,
                       dateCategory as
-                        | "Today"
-                        | "Yesterday"
-                        | "Previous Week"
-                        | "Older"
+                        "Today" | "Yesterday" | "Previous Week" | "Older"
                     )
 
                     return (

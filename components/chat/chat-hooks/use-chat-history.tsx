@@ -1,5 +1,5 @@
 import { ChatbotUIContext } from "@/context/context"
-import { useContext, useEffect, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 
 /**
  * Custom hook for handling chat history in the chat component.
@@ -18,10 +18,19 @@ export const useChatHistoryHandler = () => {
     chatMessages.length
   )
 
+  const prevChatMessagesRef = useRef(chatMessages)
+  const prevIsGeneratingRef = useRef(isGenerating)
+
   useEffect(() => {
     // If messages get deleted the history index pointed could be out of bounds
-    if (!isGenerating && messageHistoryIndex > chatMessages.length)
-      setMessageHistoryIndex(chatMessages.length)
+    if (
+      !prevIsGeneratingRef.current &&
+      messageHistoryIndex > prevChatMessagesRef.current.length
+    ) {
+      setMessageHistoryIndex(prevChatMessagesRef.current.length)
+    }
+    prevChatMessagesRef.current = chatMessages
+    prevIsGeneratingRef.current = isGenerating
   }, [chatMessages, isGenerating, messageHistoryIndex])
 
   /**

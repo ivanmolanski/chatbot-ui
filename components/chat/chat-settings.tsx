@@ -14,8 +14,6 @@ const DEFAULT_MAX_TEMPERATURE = 2.0
 const DEFAULT_MAX_CONTEXT_LENGTH = 128000
 
 export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
-  useHotkey("i", () => handleClick())
-
   const {
     chatSettings,
     setChatSettings,
@@ -32,6 +30,8 @@ export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
       buttonRef.current.click()
     }
   }
+
+  useHotkey("i", () => handleClick())
 
   useEffect(() => {
     if (!chatSettings) return

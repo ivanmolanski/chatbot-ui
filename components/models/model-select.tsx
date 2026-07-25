@@ -32,6 +32,7 @@ export const ModelSelect: FC<ModelSelectProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const [dropdownWidth, setDropdownWidth] = useState(0)
 
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -42,6 +43,12 @@ export const ModelSelect: FC<ModelSelectProps> = ({
       setTimeout(() => {
         inputRef.current?.focus()
       }, 100) // FIX: hacky
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (triggerRef.current) {
+      setDropdownWidth(triggerRef.current.offsetWidth)
     }
   }, [isOpen])
 
@@ -129,27 +136,9 @@ export const ModelSelect: FC<ModelSelectProps> = ({
 
       <DropdownMenuContent
         className="space-y-2 overflow-auto p-2"
-        style={{ width: triggerRef.current?.offsetWidth }}
+        style={{ width: dropdownWidth }}
         align="start"
       >
-        <Tabs value={tab} onValueChange={(value: any) => setTab(value)}>
-          {availableLocalModels.length > 0 && (
-            <TabsList defaultValue="hosted" className="grid grid-cols-2">
-              <TabsTrigger value="hosted">Hosted</TabsTrigger>
-
-              <TabsTrigger value="local">Local</TabsTrigger>
-            </TabsList>
-          )}
-        </Tabs>
-
-        <Input
-          ref={inputRef}
-          className="w-full"
-          placeholder="Search models..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-
         <div className="max-h-[300px] overflow-auto">
           {Object.entries(groupedModels).map(([provider, models]) => {
             const filteredModels = models

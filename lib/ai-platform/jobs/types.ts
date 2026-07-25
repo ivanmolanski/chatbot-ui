@@ -20,12 +20,7 @@ export interface Job {
 }
 
 export type JobStatus =
-  | "pending"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "paused"
+  "pending" | "running" | "completed" | "failed" | "cancelled" | "paused"
 
 export interface JobHandle {
   jobId: string

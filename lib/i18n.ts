@@ -1,6 +1,6 @@
 import i18nConfig from "@/i18nConfig"
 import { createInstance } from "i18next"
-import resourcesToBackend from "i18next-resources-to-backend"
+import HttpBackend from "i18next-http-backend"
 import { initReactI18next } from "react-i18next/initReactI18next"
 
 export default async function initTranslations(
@@ -14,12 +14,7 @@ export default async function initTranslations(
   i18nInstance.use(initReactI18next)
 
   if (!resources) {
-    i18nInstance.use(
-      resourcesToBackend(
-        (language: string, namespace: string) =>
-          import(`/public/locales/${language}/${namespace}.json`)
-      )
-    )
+    i18nInstance.use(HttpBackend)
   }
 
   await i18nInstance.init({
@@ -30,7 +25,10 @@ export default async function initTranslations(
     defaultNS: namespaces[0],
     fallbackNS: namespaces[0],
     ns: namespaces,
-    preload: resources ? [] : i18nConfig.locales
+    preload: resources ? [] : i18nConfig.locales,
+    backend: {
+      loadPath: "/locales/{{lng}}/{{ns}}.json"
+    }
   })
 
   return {

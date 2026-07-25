@@ -114,7 +114,12 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
   const [selectedTools, setSelectedTools] = useState<any[]>([])
   const [toolInUse, setToolInUse] = useState<string>("none")
 
+  const initializedRef = useRef(false)
+
   useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     // Initialize the platform client per ARCHITECTURE.md Phase 2
     // Transport + Adapter pattern — UI never knows the backend
     const transport = new HTTPTransport("/api/v1")

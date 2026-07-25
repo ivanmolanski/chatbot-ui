@@ -164,7 +164,7 @@ export const useChatHandler = () => {
               event = JSON.parse(jsonStr)
             } catch {
               // Only handle JSON parse errors - treat as plain text delta
-              if (jsonStr && !jsonStr.startsWith("{")) {
+              if (jsonStr) {
                 responseText += jsonStr
                 setFirstTokenReceived(true)
               }

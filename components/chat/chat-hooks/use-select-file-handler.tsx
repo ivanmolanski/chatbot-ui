@@ -4,7 +4,7 @@
  */
 
 import { ChatbotUIContext } from "@/context/context"
-import { useContext, useEffect, useState } from "react"
+import { useContext, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 export const ACCEPTED_FILE_TYPES = [
@@ -26,19 +26,15 @@ export const useSelectFileHandler = () => {
     setUseRetrieval
   } = useContext(ChatbotUIContext)
 
-  const [filesToAccept, setFilesToAccept] = useState(ACCEPTED_FILE_TYPES)
-
-  useEffect(() => {
+  const filesToAccept = useMemo(() => {
     const model = chatSettings?.model
-    if (!model) return
+    if (!model) return ACCEPTED_FILE_TYPES
 
     // Per ARCHITECTURE.md: model capabilities served by control plane
     // Allow images when model supports vision (determined by control plane)
-    setFilesToAccept(
-      model.includes("vision") || model.includes("gpt-4o")
-        ? `${ACCEPTED_FILE_TYPES},image/*`
-        : ACCEPTED_FILE_TYPES
-    )
+    return model.includes("vision") || model.includes("gpt-4o")
+      ? `${ACCEPTED_FILE_TYPES},image/*`
+      : ACCEPTED_FILE_TYPES
   }, [chatSettings?.model])
 
   const handleSelectDeviceFile = async (file: File) => {

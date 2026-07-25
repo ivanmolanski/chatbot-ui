@@ -13,15 +13,13 @@ import { IconBuilding, IconHome, IconPlus } from "@tabler/icons-react"
 import { ChevronsUpDown } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { FC, useContext, useEffect, useState } from "react"
+import { FC, useContext, useEffect, useRef, useState } from "react"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 
 interface WorkspaceSwitcherProps {}
 
 export const WorkspaceSwitcher: FC<WorkspaceSwitcherProps> = ({}) => {
-  useHotkey(";", () => setOpen(prevState => !prevState))
-
   const {
     workspaces,
     workspaceImages,
@@ -38,10 +36,17 @@ export const WorkspaceSwitcher: FC<WorkspaceSwitcherProps> = ({}) => {
   const [value, setValue] = useState("")
   const [search, setSearch] = useState("")
 
+  const prevSelectedWorkspaceRef = useRef(selectedWorkspace)
+
+  useHotkey(";", () => setOpen(prevState => !prevState))
+
   useEffect(() => {
     if (!selectedWorkspace) return
 
-    setValue(selectedWorkspace.id)
+    if (prevSelectedWorkspaceRef.current !== selectedWorkspace) {
+      setValue(selectedWorkspace.id)
+      prevSelectedWorkspaceRef.current = selectedWorkspace
+    }
   }, [selectedWorkspace])
 
   const handleCreateWorkspace = async () => {

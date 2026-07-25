@@ -9,7 +9,7 @@ import {
 } from "@/lib/db/constants"
 import { IconRobotFace } from "@tabler/icons-react"
 import Image from "next/image"
-import { FC, useContext, useEffect, useState } from "react"
+import { FC, useContext, useEffect, useRef, useState } from "react"
 import { SidebarItem } from "../all/sidebar-display-item"
 import { AssistantRetrievalSelect } from "./assistant-retrieval-select"
 import { AssistantToolSelect } from "./assistant-tool-select"
@@ -36,11 +36,21 @@ export const AssistantItem: FC<AssistantItemProps> = ({ assistant }) => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imageLink, setImageLink] = useState("")
 
+  const prevAssistantRef = useRef(assistant)
+  const prevAssistantImagesRef = useRef(assistantImages)
+
   useEffect(() => {
-    const assistantImage =
-      assistantImages.find(image => image.path === assistant.image_path)
-        ?.base64 || ""
-    setImageLink(assistantImage)
+    if (
+      prevAssistantRef.current !== assistant ||
+      prevAssistantImagesRef.current !== assistantImages
+    ) {
+      const assistantImage =
+        assistantImages.find(image => image.path === assistant.image_path)
+          ?.base64 || ""
+      setImageLink(assistantImage)
+      prevAssistantRef.current = assistant
+      prevAssistantImagesRef.current = assistantImages
+    }
   }, [assistant, assistantImages])
 
   const handleFileSelect = (

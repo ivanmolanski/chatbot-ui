@@ -26,12 +26,19 @@ export const AssignWorkspaces: FC<AssignWorkspaces> = ({
 
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState("")
+  const [triggerWidth, setTriggerWidth] = useState(0)
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
         inputRef.current?.focus()
       }, 100) // FIX: hacky
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (triggerRef.current) {
+      setTriggerWidth(triggerRef.current.offsetWidth)
     }
   }, [isOpen])
 
@@ -69,7 +76,7 @@ export const AssignWorkspaces: FC<AssignWorkspaces> = ({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        style={{ width: triggerRef.current?.offsetWidth }}
+        style={{ width: triggerWidth }}
         className="space-y-2 overflow-auto p-2"
         align="start"
       >

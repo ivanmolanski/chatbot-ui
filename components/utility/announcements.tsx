@@ -6,15 +6,19 @@ import {
 } from "@/components/ui/popover"
 import { Announcement } from "@/types/announcement"
 import { IconExternalLink, IconSpeakerphone } from "@tabler/icons-react"
-import { FC, useEffect, useState } from "react"
+import { FC, useEffect, useRef, useState } from "react"
 import { SIDEBAR_ICON_SIZE } from "../sidebar/sidebar-switcher"
 
 interface AnnouncementsProps {}
 
 export const Announcements: FC<AnnouncementsProps> = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const initializedRef = useRef(false)
 
   useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     // Load announcements from local storage
     const storedAnnouncements = localStorage.getItem("announcements")
     let parsedAnnouncements: Announcement[] = []

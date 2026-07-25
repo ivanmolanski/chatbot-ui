@@ -5,7 +5,7 @@ import {
   IconCircleXFilled,
   IconLoader2
 } from "@tabler/icons-react"
-import { FC, useCallback, useState } from "react"
+import { FC, useCallback, useMemo, useRef, useState } from "react"
 import { LimitDisplay } from "../ui/limit-display"
 import { toast } from "sonner"
 
@@ -22,6 +22,23 @@ const PROFILE_USERNAME_MIN = 3
 const PROFILE_USERNAME_MAX = 50
 const PROFILE_DISPLAY_NAME_MAX = 100
 
+const debounce = <T extends (...args: any[]) => void>(
+  func: T,
+  wait: number
+): T => {
+  let timeout: NodeJS.Timeout | null = null
+
+  return ((...args: any[]) => {
+    const later = () => {
+      if (timeout) clearTimeout(timeout)
+      func(...args)
+    }
+
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }) as T
+}
+
 export const ProfileStep: FC<ProfileStepProps> = ({
   username,
   usernameAvailable,
@@ -32,21 +49,7 @@ export const ProfileStep: FC<ProfileStepProps> = ({
 }) => {
   const [loading, setLoading] = useState(false)
 
-  const debounce = (func: (...args: any[]) => void, wait: number) => {
-    let timeout: NodeJS.Timeout | null
-
-    return (...args: any[]) => {
-      const later = () => {
-        if (timeout) clearTimeout(timeout)
-        func(...args)
-      }
-
-      if (timeout) clearTimeout(timeout)
-      timeout = setTimeout(later, wait)
-    }
-  }
-
-  const checkUsernameAvailability = useCallback(
+  const checkUsernameAvailabilityRef = useRef(
     debounce(async (username: string) => {
       if (!username) return
 
@@ -70,9 +73,12 @@ export const ProfileStep: FC<ProfileStepProps> = ({
       } catch {
         onUsernameAvailableChange(false)
       }
-    }, 300),
-    [onUsernameAvailableChange]
+    }, 300)
   )
+
+  const checkUsernameAvailability = useCallback((username: string) => {
+    checkUsernameAvailabilityRef.current(username)
+  }, [])
 
   return (
     <>

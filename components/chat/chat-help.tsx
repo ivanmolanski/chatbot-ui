@@ -20,9 +20,9 @@ import { Announcements } from "../utility/announcements"
 interface ChatHelpProps {}
 
 export const ChatHelp: FC<ChatHelpProps> = ({}) => {
-  useHotkey("/", () => setIsOpen(prevState => !prevState))
-
   const [isOpen, setIsOpen] = useState(false)
+
+  useHotkey("/", () => setIsOpen(prevState => !prevState))
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>

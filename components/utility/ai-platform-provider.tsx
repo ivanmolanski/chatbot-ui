@@ -12,7 +12,8 @@ import {
   useContext,
   useState,
   useEffect,
-  ReactNode
+  ReactNode,
+  useRef
 } from "react"
 import type { AIPlatformClient } from "@/lib/ai-platform/client"
 import { AIPlatformClientImpl } from "@/lib/ai-platform/client-impl"
@@ -42,7 +43,12 @@ export function AIPlatformProvider({ children }: AIPlatformProviderProps) {
     return r
   })
 
+  const initializedRef = useRef(false)
+
   useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     // Initialize the client
     const transport = new HTTPTransport("/api/v1")
     const adapter = new AFDeepResearchAdapter()

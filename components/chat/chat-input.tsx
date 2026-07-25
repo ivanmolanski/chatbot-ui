@@ -25,10 +25,6 @@ interface ChatInputProps {}
 export const ChatInput: FC<ChatInputProps> = ({}) => {
   const { t } = useTranslation()
 
-  useHotkey("l", () => {
-    handleFocusChatInput()
-  })
-
   const [isTyping, setIsTyping] = useState<boolean>(false)
 
   const {
@@ -62,6 +58,10 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
     handleStopMessage,
     handleFocusChatInput
   } = useChatHandler()
+
+  useHotkey("l", () => {
+    handleFocusChatInput()
+  })
 
   const { handleInputChange } = usePromptAndCommand()
 

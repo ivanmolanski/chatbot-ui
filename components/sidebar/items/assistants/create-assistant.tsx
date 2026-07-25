@@ -8,7 +8,7 @@ import {
   ASSISTANT_NAME_MAX,
   ASSISTANT_DESCRIPTION_MAX
 } from "@/lib/db/constants"
-import { FC, useContext, useEffect, useState } from "react"
+import { FC, useContext, useEffect, useRef, useState } from "react"
 import { AssistantRetrievalSelect } from "./assistant-retrieval-select"
 import { AssistantToolSelect } from "./assistant-tool-select"
 
@@ -43,18 +43,23 @@ export const CreateAssistant: FC<CreateAssistantProps> = ({
     any[]
   >([])
 
+  const prevNameRef = useRef(name)
+
   useEffect(() => {
-    setAssistantChatSettings(prevSettings => {
-      const previousPrompt = prevSettings.prompt || ""
-      const previousPromptParts = previousPrompt.split(". ")
+    if (prevNameRef.current !== name) {
+      setAssistantChatSettings(prevSettings => {
+        const previousPrompt = prevSettings.prompt || ""
+        const previousPromptParts = previousPrompt.split(". ")
 
-      previousPromptParts[0] = name ? `You are ${name}` : ""
+        previousPromptParts[0] = name ? `You are ${name}` : ""
 
-      return {
-        ...prevSettings,
-        prompt: previousPromptParts.join(". ")
-      }
-    })
+        return {
+          ...prevSettings,
+          prompt: previousPromptParts.join(". ")
+        }
+      })
+      prevNameRef.current = name
+    }
   }, [name])
 
   const handleRetrievalItemSelect = (item: any | any) => {

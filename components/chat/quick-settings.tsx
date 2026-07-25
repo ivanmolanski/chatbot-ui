@@ -26,8 +26,6 @@ interface QuickSettingsProps {}
 export const QuickSettings: FC<QuickSettingsProps> = ({}) => {
   const { t } = useTranslation()
 
-  useHotkey("p", () => setIsOpen(prevState => !prevState))
-
   const {
     presets,
     assistants,
@@ -49,6 +47,8 @@ export const QuickSettings: FC<QuickSettingsProps> = ({}) => {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
+
+  useHotkey("p", () => setIsOpen(prevState => !prevState))
 
   useEffect(() => {
     if (isOpen) {
@@ -102,8 +102,7 @@ export const QuickSettings: FC<QuickSettingsProps> = ({}) => {
           includeWorkspaceInstructions:
             selectedWorkspace.include_workspace_instructions,
           embeddingsProvider: selectedWorkspace.embeddings_provider as
-            | "openai"
-            | "local"
+            "openai" | "local"
         })
       }
       return

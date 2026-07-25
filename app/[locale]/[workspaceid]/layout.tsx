@@ -9,7 +9,14 @@
 import { Dashboard } from "@/components/ui/dashboard"
 import { ChatbotUIContext } from "@/context/context"
 import { useParams, useRouter } from "next/navigation"
-import { ReactNode, useCallback, useContext, useEffect, useState } from "react"
+import {
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState
+} from "react"
 import Loading from "../loading"
 
 interface WorkspaceLayoutProps {
@@ -59,39 +66,14 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     [setSelectedWorkspace]
   )
 
+  const hasFetchedRef = useRef(false)
+
   useEffect(() => {
-    fetchWorkspaceData(workspaceId)
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true
+      fetchWorkspaceData(workspaceId)
+    }
   }, [fetchWorkspaceData, workspaceId])
-
-  useEffect(() => {
-    fetchWorkspaceData(workspaceId)
-
-    setUserInput("")
-    setChatMessages([])
-    setSelectedChat(null)
-
-    setIsGenerating(false)
-    setFirstTokenReceived(false)
-
-    setChatFiles([])
-    setChatImages([])
-    setNewMessageFiles([])
-    setNewMessageImages([])
-    setShowFilesDisplay(false)
-  }, [
-    fetchWorkspaceData,
-    workspaceId,
-    setChatFiles,
-    setChatImages,
-    setChatMessages,
-    setFirstTokenReceived,
-    setIsGenerating,
-    setNewMessageFiles,
-    setNewMessageImages,
-    setSelectedChat,
-    setShowFilesDisplay,
-    setUserInput
-  ])
 
   if (loading) {
     return <Loading />

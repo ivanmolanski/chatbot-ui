@@ -24,6 +24,7 @@ export const CollectionFileSelect: FC<CollectionFileSelectProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const [dropdownWidth, setDropdownWidth] = useState(0)
 
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -33,6 +34,12 @@ export const CollectionFileSelect: FC<CollectionFileSelectProps> = ({
       setTimeout(() => {
         inputRef.current?.focus()
       }, 100) // FIX: hacky
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (triggerRef.current) {
+      setDropdownWidth(triggerRef.current.offsetWidth)
     }
   }, [isOpen])
 
@@ -70,7 +77,7 @@ export const CollectionFileSelect: FC<CollectionFileSelectProps> = ({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        style={{ width: triggerRef.current?.offsetWidth }}
+        style={{ width: dropdownWidth }}
         className="space-y-2 overflow-auto p-2"
         align="start"
       >

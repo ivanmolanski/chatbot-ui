@@ -26,7 +26,7 @@ import {
   convertBlobToBase64
 } from "@/lib/db/create-functions"
 import { ContentType } from "@/types"
-import { FC, useContext, useRef, useState } from "react"
+import { FC, JSX, useContext, useRef, useState } from "react"
 import { toast } from "sonner"
 
 interface SidebarCreateItemProps {

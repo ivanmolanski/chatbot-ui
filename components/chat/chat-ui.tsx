@@ -15,8 +15,6 @@ import { ChatSecondaryButtons } from "./chat-secondary-buttons"
 interface ChatUIProps {}
 
 export const ChatUI: FC<ChatUIProps> = ({}) => {
-  useHotkey("o", () => handleNewChat())
-
   const params = useParams()
 
   const {
@@ -49,6 +47,8 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
   } = useScroll()
 
   const [loading, setLoading] = useState(true)
+
+  useHotkey("o", () => handleNewChat())
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,14 +92,12 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
       setIsAtBottom(true)
     }
 
-    if (params.chatid) {
-      fetchData().then(() => {
+    fetchData().then(() => {
+      if (params.chatid) {
         handleFocusChatInput()
-        setLoading(false)
-      })
-    } else {
+      }
       setLoading(false)
-    }
+    })
   }, [
     handleFocusChatInput,
     params.chatid,

@@ -55,6 +55,72 @@ export function useChatHandler(client: AIPlatformClient): UseChatHandlerReturn {
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  const loadConversations = useCallback(async () => {
+    try {
+      const result = await client.listConversations({ limit: 50 })
+      setState(prev => ({
+        ...prev,
+        conversations: result.items
+      }))
+    } catch (error) {
+      console.error("Failed to load conversations:", error)
+    }
+  }, [client])
+
+  const handleStreamEvent = useCallback(
+    (event: ExecutionEvent) => {
+      switch (event.type) {
+        case "content.delta":
+          // Append text to the last assistant message
+          setState(prev => {
+            const messages = [...prev.messages]
+            const lastMsg = messages[messages.length - 1]
+
+            if (lastMsg?.role === "assistant") {
+              lastMsg.content += (event.data as { text: string }).text
+            } else {
+              // Create new assistant message
+              messages.push({
+                id: `msg_${Date.now()}`,
+                conversationId: prev.selectedConversation?.id || "",
+                executionId: event.executionid || "",
+                role: "assistant",
+                content: (event.data as { text: string }).text,
+                timestamp: event.time,
+                artifacts: [],
+                citations: [],
+                metadata: {}
+              })
+            }
+
+            return { ...prev, messages }
+          })
+          break
+
+        case "execution.started":
+          setState(prev => ({
+            ...prev,
+            activeExecutionId: (event.data as { executionId: string })
+              .executionId
+          }))
+          break
+
+        case "execution.completed":
+          // Refresh conversation list
+          loadConversations()
+          break
+
+        case "error":
+          setState(prev => ({
+            ...prev,
+            error: (event.data as { message: string }).message
+          }))
+          break
+      }
+    },
+    [loadConversations]
+  )
+
   const sendMessage = useCallback(
     async (
       content: string,
@@ -113,70 +179,8 @@ export function useChatHandler(client: AIPlatformClient): UseChatHandlerReturn {
         }))
       }
     },
-    [client, state.selectedConversation]
+    [client, state.selectedConversation, handleStreamEvent]
   )
-
-  const handleStreamEvent = useCallback((event: ExecutionEvent) => {
-    switch (event.type) {
-      case "content.delta":
-        // Append text to the last assistant message
-        setState(prev => {
-          const messages = [...prev.messages]
-          const lastMsg = messages[messages.length - 1]
-
-          if (lastMsg?.role === "assistant") {
-            lastMsg.content += (event.data as { text: string }).text
-          } else {
-            // Create new assistant message
-            messages.push({
-              id: `msg_${Date.now()}`,
-              conversationId: prev.selectedConversation?.id || "",
-              executionId: event.executionid || "",
-              role: "assistant",
-              content: (event.data as { text: string }).text,
-              timestamp: event.time,
-              artifacts: [],
-              citations: [],
-              metadata: {}
-            })
-          }
-
-          return { ...prev, messages }
-        })
-        break
-
-      case "execution.started":
-        setState(prev => ({
-          ...prev,
-          activeExecutionId: (event.data as { executionId: string }).executionId
-        }))
-        break
-
-      case "execution.completed":
-        // Refresh conversation list
-        loadConversations()
-        break
-
-      case "error":
-        setState(prev => ({
-          ...prev,
-          error: (event.data as { message: string }).message
-        }))
-        break
-    }
-  }, [])
-
-  const loadConversations = useCallback(async () => {
-    try {
-      const result = await client.listConversations({ limit: 50 })
-      setState(prev => ({
-        ...prev,
-        conversations: result.items
-      }))
-    } catch (error) {
-      console.error("Failed to load conversations:", error)
-    }
-  }, [client])
 
   const selectConversation = useCallback(
     async (id: string) => {

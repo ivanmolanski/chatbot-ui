@@ -40,11 +40,7 @@ export type ExecutionType =
   | string // Extensible — backend can add new types without API changes
 
 export type ExecutionStatus =
-  | "queued"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled"
+  "queued" | "running" | "completed" | "failed" | "cancelled"
 
 export interface ExecutionInput {
   content: string

@@ -115,14 +115,12 @@ export const Message: FC<MessageProps> = ({
   }
 
   useEffect(() => {
-    setEditedMessage(message.content)
-
     if (isEditing && editInputRef.current) {
       const input = editInputRef.current
       input.focus()
       input.setSelectionRange(input.value.length, input.value.length)
     }
-  }, [isEditing, message.content])
+  }, [isEditing])
 
   const MODEL_DATA = [
     ...models.map(model => ({
@@ -260,7 +258,7 @@ export const Message: FC<MessageProps> = ({
                     : selectedAssistant
                       ? selectedAssistant?.name
                       : modelDetails?.modelName
-                  : profile?.display_name ?? profile?.username}
+                  : (profile?.display_name ?? profile?.username)}
               </div>
             </div>
           )}
