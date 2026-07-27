@@ -66,6 +66,7 @@
     "next-pwa": "*",
     "next-themes": "*",
     "node-fetch": "*",
+    "npm": "*",
     "pdf-parse": "*",
     "react": "*",
     "react-day-picker": "*",
@@ -110,5 +111,9 @@
     "tailwindcss-animate": "*",
     "ts-node": "*",
     "typescript": "*"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true,
+    "unrs-resolver@1.12.2": true
   }
 }

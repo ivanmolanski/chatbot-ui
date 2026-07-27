@@ -8,7 +8,7 @@ import { i18nRouter } from "next-i18n-router"
 import { NextRequest, NextResponse } from "next/server"
 import i18nConfig from "./i18nConfig"
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   console.log("[Middleware] Path:", request.nextUrl.pathname)
   
   // Skip i18n routing for ALL API routes - return early before i18nRouter
