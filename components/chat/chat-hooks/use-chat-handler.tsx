@@ -102,6 +102,10 @@ export const useChatHandler = () => {
   ) => {
     const startingInput = messageContent
 
+    // Helper to stringify result (string or object) preserving existing behavior
+    const stringifyResult = (result: unknown): string =>
+      typeof result === "string" ? result : JSON.stringify(result, null, 2)
+
     try {
       setUserInput("")
       setIsGenerating(true)
@@ -175,7 +179,88 @@ export const useChatHandler = () => {
             const eventType = event.type || ""
             const eventData = event.data || event
 
-            if (eventType === "token" || eventType === "content.delta") {
+            // Handle control plane SSE events (CloudEvents format)
+            if (eventType === "execution_updated") {
+              // Execution status update - extract note/message if present
+              const status = eventData.status || ""
+              if (status) setToolInUse(status)
+            } else if (eventType === "workflow_note_added") {
+              // Progress notes from the agent
+              const note = eventData.note?.message || eventData.message || ""
+              if (note) {
+                setToolInUse(note)
+                // Also append to response text for visibility
+                responseText += `\n\n${note}`
+                setFirstTokenReceived(true)
+              }
+            } else if (
+              eventType === "execution_completed" ||
+              eventType === "execution.failed"
+            ) {
+              // Separate failure from success: only process results for completion
+              if (eventType === "execution.failed") {
+                throw new Error(eventData.message || "Research failed")
+              }
+              // Fetch the full execution details to get the result
+              if (eventData.execution_id) {
+                try {
+                  // Create a timeout controller for the fetch
+                  const fetchController = new AbortController()
+                  const timeoutId = setTimeout(
+                    () => fetchController.abort(),
+                    10000
+                  )
+
+                  const execResponse = await fetch(
+                    `/api/v1/executions/${eventData.execution_id}`,
+                    {
+                      headers: { Accept: "application/json" },
+                      // Combine both abort signals
+                      signal: AbortSignal.any([
+                        newAbortController.signal,
+                        fetchController.signal
+                      ])
+                    }
+                  )
+                  clearTimeout(timeoutId)
+
+                  if (execResponse.ok) {
+                    const execData = await execResponse.json()
+                    if (execData.result) {
+                      responseText = stringifyResult(execData.result)
+                    } else if (execData.document?.sections) {
+                      responseText = execData.document.sections.join("\n\n")
+                    }
+                  } else {
+                    throw new Error(
+                      `Failed to fetch execution: ${execResponse.status}`
+                    )
+                  }
+                } catch (e) {
+                  if ((e as Error).name === "AbortError") {
+                    // Distinguish between user cancellation and fetch timeout
+                    if (newAbortController.signal.aborted) {
+                      throw e // User cancelled
+                    }
+                    throw new Error("Execution result fetch timed out")
+                  }
+                  console.error("Failed to fetch execution result:", e)
+                  throw new Error("Failed to fetch execution result")
+                }
+              } else if (eventData.result) {
+                responseText = stringifyResult(eventData.result)
+              } else if (eventData.document?.sections) {
+                responseText = eventData.document.sections.join("\n\n")
+              }
+              // Mark first token received when we have response text
+              if (responseText) {
+                setFirstTokenReceived(true)
+              }
+            } else if (eventType === "error") {
+              throw new Error(eventData.message || "Research failed")
+            }
+            // Handle legacy/direct agent events
+            else if (eventType === "token" || eventType === "content.delta") {
               const text = eventData.text || eventData.content || ""
               if (text) {
                 responseText += text
@@ -201,23 +286,6 @@ export const useChatHandler = () => {
             ) {
               const step = eventData.currentStep || eventData.step || ""
               if (step) setToolInUse(step)
-            } else if (
-              eventType === "done" ||
-              eventType === "execution.completed"
-            ) {
-              if (
-                Array.isArray(eventData.document?.sections) &&
-                eventData.document.sections.length > 0
-              ) {
-                responseText = eventData.document.sections.join("\n\n")
-              } else if (eventData.result) {
-                responseText =
-                  typeof eventData.result === "string"
-                    ? eventData.result
-                    : JSON.stringify(eventData.result, null, 2)
-              }
-            } else if (eventType === "error") {
-              throw new Error(eventData.message || "Research failed")
             }
           }
 
