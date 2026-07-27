@@ -119,14 +119,14 @@ export const useChatHandler = () => {
 
       // AF Deep Research: POST /api/v1/execute/async/{agent}.{reasoner}
       // Backend expects: {"input": {"query": "..."}}
-      // Returns SSE stream with research events
-      const response = await fetch(
+      // Returns JSON with execution_id, then we connect to SSE at /api/v1/executions/events
+      const executeResponse = await fetch(
         "/api/v1/execute/async/meta_deep_research.execute_deep_research",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Accept: "text/event-stream"
+            Accept: "application/json"
           },
           body: JSON.stringify({
             input: { query: messageContent }
@@ -135,202 +135,264 @@ export const useChatHandler = () => {
         }
       )
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => response.statusText)
-        throw new Error(`Execution failed (${response.status}): ${errorText}`)
+      if (!executeResponse.ok) {
+        const errorText = await executeResponse
+          .text()
+          .catch(() => executeResponse.statusText)
+        throw new Error(
+          `Execution failed (${executeResponse.status}): ${errorText}`
+        )
+      }
+
+      const executeData = await executeResponse.json()
+      const executionId =
+        executeData.execution_id ||
+        executeData.run_id ||
+        executeData.workflow_id
+
+      if (!executionId) {
+        throw new Error("No execution ID returned from backend")
+      }
+
+      // Now connect to SSE stream for execution events
+      // Use the proxy endpoint which injects auth, filter by execution_id
+      const sseUrl = `/api/executions/events?execution_id=${encodeURIComponent(executionId)}`
+      const sseResponse = await fetch(sseUrl, {
+        headers: {
+          Accept: "text/event-stream"
+        },
+        signal: newAbortController.signal
+      })
+
+      if (!sseResponse.ok) {
+        const errorText = await sseResponse
+          .text()
+          .catch(() => sseResponse.statusText)
+        throw new Error(
+          `SSE connection failed (${sseResponse.status}): ${errorText}`
+        )
       }
 
       // Stream SSE response from AF backend
-      if (response.body) {
-        const reader = response.body.getReader()
+      if (sseResponse.body) {
+        const reader = sseResponse.body.getReader()
         const decoder = new TextDecoder()
         let thinkingText = ""
         let responseText = ""
         let buffer = ""
+        let shouldExitLoop = false
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
 
-          buffer += decoder.decode(value, { stream: true })
+            buffer += decoder.decode(value, { stream: true })
 
-          // Process SSE events (lines starting with "data: ")
-          const lines = buffer.split("\n")
-          buffer = lines.pop() || "" // Keep incomplete line in buffer
+            // Process SSE events (lines starting with "data: ")
+            const lines = buffer.split("\n")
+            buffer = lines.pop() || "" // Keep incomplete line in buffer
 
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue
-            const jsonStr = line.slice(6).trim()
-            if (!jsonStr || jsonStr === "[DONE]") continue
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue
+              const jsonStr = line.slice(6).trim()
+              if (!jsonStr || jsonStr === "[DONE]") continue
 
-            let event: any
-            try {
-              event = JSON.parse(jsonStr)
-            } catch {
-              // Only handle JSON parse errors - treat as plain text delta
-              if (jsonStr) {
-                responseText += jsonStr
-                setFirstTokenReceived(true)
+              let event: any
+              try {
+                event = JSON.parse(jsonStr)
+              } catch {
+                // Only handle JSON parse errors - treat as plain text delta
+                if (jsonStr) {
+                  responseText += jsonStr
+                  setFirstTokenReceived(true)
+                }
+                continue
               }
-              continue
-            }
 
-            // AF events have a "type" field and "data" payload
-            const eventType = event.type || ""
-            const eventData = event.data || event
+              // AF events have a "type" field and "data" payload
+              const eventType = event.type || ""
+              const eventData = event.data || event
 
-            // Handle control plane SSE events (CloudEvents format)
-            if (eventType === "execution_updated") {
-              // Execution status update - extract note/message if present
-              const status = eventData.status || ""
-              if (status) setToolInUse(status)
-            } else if (eventType === "workflow_note_added") {
-              // Progress notes from the agent
-              const note = eventData.note?.message || eventData.message || ""
-              if (note) {
-                setToolInUse(note)
-                // Also append to response text for visibility
-                responseText += `\n\n${note}`
-                setFirstTokenReceived(true)
+              // Filter events by execution_id - only process events for our execution
+              const eventExecutionId =
+                eventData.execution_id ||
+                event.executionid ||
+                event.execution_id
+              if (eventExecutionId && eventExecutionId !== executionId) {
+                continue // Skip events for other executions
               }
-            } else if (
-              eventType === "execution_completed" ||
-              eventType === "execution.failed"
-            ) {
-              // Separate failure from success: only process results for completion
-              if (eventType === "execution.failed") {
+
+              // Handle control plane SSE events (CloudEvents format)
+              if (eventType === "execution_updated") {
+                // Execution status update - extract note/message if present
+                const status = eventData.status || ""
+                if (status) setToolInUse(status)
+              } else if (eventType === "workflow_note_added") {
+                // Progress notes from the agent
+                const note = eventData.note?.message || eventData.message || ""
+                if (note) {
+                  setToolInUse(note)
+                  // Also append to response text for visibility
+                  responseText += `\n\n${note}`
+                  setFirstTokenReceived(true)
+                }
+              } else if (
+                eventType === "execution_completed" ||
+                eventType === "execution.failed"
+              ) {
+                // Separate failure from success: only process results for completion
+                if (eventType === "execution.failed") {
+                  // Cancel the reader before propagating the error
+                  reader.cancel().catch(() => {})
+                  throw new Error(eventData.message || "Research failed")
+                }
+                // Fetch the full execution details to get the result
+                // Use the normalized eventExecutionId which handles all fallback fields
+                const resultExecutionId =
+                  eventExecutionId || eventData.execution_id
+                if (resultExecutionId) {
+                  try {
+                    // Create a timeout controller for the fetch
+                    const fetchController = new AbortController()
+                    const timeoutId = setTimeout(
+                      () => fetchController.abort(),
+                      10000
+                    )
+
+                    const execResponse = await fetch(
+                      `/api/v1/executions/${resultExecutionId}`,
+                      {
+                        headers: { Accept: "application/json" },
+                        // Combine both abort signals
+                        signal: AbortSignal.any([
+                          newAbortController.signal,
+                          fetchController.signal
+                        ])
+                      }
+                    )
+                    clearTimeout(timeoutId)
+
+                    if (execResponse.ok) {
+                      const execData = await execResponse.json()
+                      if (execData.result) {
+                        responseText = stringifyResult(execData.result)
+                      } else if (execData.document?.sections) {
+                        responseText = execData.document.sections.join("\n\n")
+                      }
+                    } else {
+                      throw new Error(
+                        `Failed to fetch execution: ${execResponse.status}`
+                      )
+                    }
+                  } catch (e) {
+                    if ((e as Error).name === "AbortError") {
+                      // Distinguish between user cancellation and fetch timeout
+                      if (newAbortController.signal.aborted) {
+                        throw e // User cancelled
+                      }
+                      throw new Error("Execution result fetch timed out")
+                    }
+                    console.error("Failed to fetch execution result:", e)
+                    throw new Error("Failed to fetch execution result")
+                  }
+                } else if (eventData.result) {
+                  responseText = stringifyResult(eventData.result)
+                } else if (eventData.document?.sections) {
+                  responseText = eventData.document.sections.join("\n\n")
+                }
+                // Mark first token received when we have response text
+                if (responseText) {
+                  setFirstTokenReceived(true)
+                }
+                // Cancel the reader after successful completion - we have the result
+                reader.cancel().catch(() => {})
+                shouldExitLoop = true
+                break // Exit the SSE read loop
+              } else if (eventType === "error") {
+                // Cancel the reader before propagating the error
+                reader.cancel().catch(() => {})
                 throw new Error(eventData.message || "Research failed")
               }
-              // Fetch the full execution details to get the result
-              if (eventData.execution_id) {
-                try {
-                  // Create a timeout controller for the fetch
-                  const fetchController = new AbortController()
-                  const timeoutId = setTimeout(
-                    () => fetchController.abort(),
-                    10000
-                  )
-
-                  const execResponse = await fetch(
-                    `/api/v1/executions/${eventData.execution_id}`,
-                    {
-                      headers: { Accept: "application/json" },
-                      // Combine both abort signals
-                      signal: AbortSignal.any([
-                        newAbortController.signal,
-                        fetchController.signal
-                      ])
-                    }
-                  )
-                  clearTimeout(timeoutId)
-
-                  if (execResponse.ok) {
-                    const execData = await execResponse.json()
-                    if (execData.result) {
-                      responseText = stringifyResult(execData.result)
-                    } else if (execData.document?.sections) {
-                      responseText = execData.document.sections.join("\n\n")
-                    }
-                  } else {
-                    throw new Error(
-                      `Failed to fetch execution: ${execResponse.status}`
-                    )
-                  }
-                } catch (e) {
-                  if ((e as Error).name === "AbortError") {
-                    // Distinguish between user cancellation and fetch timeout
-                    if (newAbortController.signal.aborted) {
-                      throw e // User cancelled
-                    }
-                    throw new Error("Execution result fetch timed out")
-                  }
-                  console.error("Failed to fetch execution result:", e)
-                  throw new Error("Failed to fetch execution result")
+              // Handle legacy/direct agent events
+              else if (eventType === "token" || eventType === "content.delta") {
+                const text = eventData.text || eventData.content || ""
+                if (text) {
+                  responseText += text
+                  setFirstTokenReceived(true)
                 }
-              } else if (eventData.result) {
-                responseText = stringifyResult(eventData.result)
-              } else if (eventData.document?.sections) {
-                responseText = eventData.document.sections.join("\n\n")
+              } else if (
+                eventType === "thinking" ||
+                eventType === "thinking.delta"
+              ) {
+                const thinkText = eventData.text || eventData.content || ""
+                if (thinkText) {
+                  thinkingText += thinkText
+                }
+              } else if (
+                eventType === "status" ||
+                eventType === "status.changed"
+              ) {
+                const msg = eventData.message || eventData.status || ""
+                if (msg) setToolInUse(msg)
+              } else if (
+                eventType === "progress" ||
+                eventType === "progress.updated"
+              ) {
+                const step = eventData.currentStep || eventData.step || ""
+                if (step) setToolInUse(step)
               }
-              // Mark first token received when we have response text
-              if (responseText) {
-                setFirstTokenReceived(true)
-              }
-            } else if (eventType === "error") {
-              throw new Error(eventData.message || "Research failed")
             }
-            // Handle legacy/direct agent events
-            else if (eventType === "token" || eventType === "content.delta") {
-              const text = eventData.text || eventData.content || ""
-              if (text) {
-                responseText += text
-                setFirstTokenReceived(true)
-              }
-            } else if (
-              eventType === "thinking" ||
-              eventType === "thinking.delta"
-            ) {
-              const thinkText = eventData.text || eventData.content || ""
-              if (thinkText) {
-                thinkingText += thinkText
-              }
-            } else if (
-              eventType === "status" ||
-              eventType === "status.changed"
-            ) {
-              const msg = eventData.message || eventData.status || ""
-              if (msg) setToolInUse(msg)
-            } else if (
-              eventType === "progress" ||
-              eventType === "progress.updated"
-            ) {
-              const step = eventData.currentStep || eventData.step || ""
-              if (step) setToolInUse(step)
+
+            // Compute fullText from accumulators
+            const fullText = thinkingText
+              ? `*${thinkingText}*\n\n${responseText}`
+              : responseText
+
+            // Update UI with accumulated text
+            if (fullText) {
+              setChatMessages(prev => {
+                const messages = [...prev]
+                const lastMsg = messages[messages.length - 1]
+
+                if (lastMsg?.message.role === "assistant") {
+                  messages[messages.length - 1] = {
+                    ...lastMsg,
+                    message: {
+                      ...lastMsg.message,
+                      content: fullText
+                    }
+                  }
+                } else {
+                  messages.push({
+                    message: {
+                      chat_id: selectedChat?.id || "",
+                      assistant_id: null,
+                      content: fullText,
+                      created_at: new Date().toISOString(),
+                      id: `msg_${Date.now()}`,
+                      image_paths: [],
+                      model: chatSettings?.model || "",
+                      role: "assistant",
+                      sequence_number: messages.length,
+                      updated_at: new Date().toISOString(),
+                      user_id: ""
+                    },
+                    fileItems: []
+                  })
+                }
+
+                return messages
+              })
             }
           }
-
-          // Compute fullText from accumulators
-          const fullText = thinkingText
-            ? `*${thinkingText}*\n\n${responseText}`
-            : responseText
-
-          // Update UI with accumulated text
-          if (fullText) {
-            setChatMessages(prev => {
-              const messages = [...prev]
-              const lastMsg = messages[messages.length - 1]
-
-              if (lastMsg?.message.role === "assistant") {
-                messages[messages.length - 1] = {
-                  ...lastMsg,
-                  message: {
-                    ...lastMsg.message,
-                    content: fullText
-                  }
-                }
-              } else {
-                messages.push({
-                  message: {
-                    chat_id: selectedChat?.id || "",
-                    assistant_id: null,
-                    content: fullText,
-                    created_at: new Date().toISOString(),
-                    id: `msg_${Date.now()}`,
-                    image_paths: [],
-                    model: chatSettings?.model || "",
-                    role: "assistant",
-                    sequence_number: messages.length,
-                    updated_at: new Date().toISOString(),
-                    user_id: ""
-                  },
-                  fileItems: []
-                })
-              }
-
-              return messages
-            })
-          }
+        } finally {
+          // Ensure reader is cancelled on every exit path
+          reader.cancel().catch(() => {})
         }
+
+        // Exit outer loop if we completed or errored
+        if (shouldExitLoop) break
       }
 
       setIsGenerating(false)
