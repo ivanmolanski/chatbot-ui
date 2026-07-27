@@ -102,7 +102,6 @@ export const useChatHandler = () => {
   ) => {
     const startingInput = messageContent
 
-    // Helper to stringify result (string or object) preserving existing behavior
     const stringifyResult = (result: unknown): string =>
       typeof result === "string" ? result : JSON.stringify(result, null, 2)
 
@@ -117,9 +116,7 @@ export const useChatHandler = () => {
       const newAbortController = new AbortController()
       setAbortController(newAbortController)
 
-      // AF Deep Research: POST /api/v1/execute/async/{agent}.{reasoner}
-      // Backend expects: {"input": {"query": "..."}}
-      // Returns JSON with execution_id, then we connect to SSE at /api/v1/executions/events
+      // Step 1: Start execution
       const executeResponse = await fetch(
         "/api/v1/execute/async/meta_deep_research.execute_deep_research",
         {
@@ -128,9 +125,7 @@ export const useChatHandler = () => {
             "Content-Type": "application/json",
             Accept: "application/json"
           },
-          body: JSON.stringify({
-            input: { query: messageContent }
-          }),
+          body: JSON.stringify({ input: { query: messageContent } }),
           signal: newAbortController.signal
         }
       )
@@ -154,13 +149,10 @@ export const useChatHandler = () => {
         throw new Error("No execution ID returned from backend")
       }
 
-      // Now connect to SSE stream for execution events
-      // Use the proxy endpoint which injects auth, filter by execution_id
+      // Step 2: Connect to SSE stream
       const sseUrl = `/api/executions/events?execution_id=${encodeURIComponent(executionId)}`
       const sseResponse = await fetch(sseUrl, {
-        headers: {
-          Accept: "text/event-stream"
-        },
+        headers: { Accept: "text/event-stream" },
         signal: newAbortController.signal
       })
 
@@ -173,14 +165,14 @@ export const useChatHandler = () => {
         )
       }
 
-      // Stream SSE response from AF backend
+      // Step 3: Read SSE stream
       if (sseResponse.body) {
         const reader = sseResponse.body.getReader()
         const decoder = new TextDecoder()
         let thinkingText = ""
         let responseText = ""
+        let progressNotes = ""
         let buffer = ""
-        let shouldExitLoop = false
 
         try {
           while (true) {
@@ -189,20 +181,19 @@ export const useChatHandler = () => {
 
             buffer += decoder.decode(value, { stream: true })
 
-            // Process SSE events (lines starting with "data: ")
-            const lines = buffer.split("\n")
-            buffer = lines.pop() || "" // Keep incomplete line in buffer
+            const lines = buffer.split(/\r?\n/)
+            buffer = lines.pop() || ""
 
             for (const line of lines) {
-              if (!line.startsWith("data: ")) continue
-              const jsonStr = line.slice(6).trim()
+              const trimmed = line.replace(/\r$/, "")
+              if (!trimmed.startsWith("data:")) continue
+              const jsonStr = trimmed.slice(5).trimStart()
               if (!jsonStr || jsonStr === "[DONE]") continue
 
-              let event: any
+              let event: Record<string, unknown>
               try {
-                event = JSON.parse(jsonStr)
+                event = JSON.parse(jsonStr) as Record<string, unknown>
               } catch {
-                // Only handle JSON parse errors - treat as plain text delta
                 if (jsonStr) {
                   responseText += jsonStr
                   setFirstTokenReceived(true)
@@ -210,68 +201,57 @@ export const useChatHandler = () => {
                 continue
               }
 
-              // AF events have a "type" field and "data" payload
-              const eventType = event.type || ""
-              const eventData = event.data || event
+              const eventType = (event.type as string) || ""
+              const eventData = (event.data as Record<string, unknown>) || event
 
-              // Filter events by execution_id - only process events for our execution
               const eventExecutionId =
-                eventData.execution_id ||
-                event.executionid ||
-                event.execution_id
+                (eventData.execution_id as string) ||
+                (event.executionId as string) ||
+                (event.execution_id as string)
               if (eventExecutionId && eventExecutionId !== executionId) {
-                continue // Skip events for other executions
+                continue
               }
 
-              // Handle control plane SSE events (CloudEvents format)
               if (eventType === "execution_updated") {
-                // Execution status update - extract note/message if present
-                const status = eventData.status || ""
+                const status = (eventData.status as string) || ""
                 if (status) setToolInUse(status)
               } else if (eventType === "workflow_note_added") {
-                // Progress notes from the agent
-                const note = eventData.note?.message || eventData.message || ""
+                const noteData = eventData.note as
+                  Record<string, unknown> | undefined
+                const note =
+                  (noteData?.message as string) ||
+                  (eventData.message as string) ||
+                  ""
                 if (note) {
                   setToolInUse(note)
-                  // Also append to response text for visibility
-                  responseText += `\n\n${note}`
+                  if (!progressNotes) progressNotes = ""
+                  progressNotes += `\n\n${note}`
                   setFirstTokenReceived(true)
                 }
               } else if (
                 eventType === "execution_completed" ||
                 eventType === "execution.failed"
               ) {
-                // Separate failure from success: only process results for completion
                 if (eventType === "execution.failed") {
-                  // Cancel the reader before propagating the error
-                  reader.cancel().catch(() => {})
-                  throw new Error(eventData.message || "Research failed")
+                  throw new Error(
+                    (eventData.message as string) || "Research failed"
+                  )
                 }
-                // Fetch the full execution details to get the result
-                // Use the normalized eventExecutionId which handles all fallback fields
+
                 const resultExecutionId =
-                  eventExecutionId || eventData.execution_id
+                  eventExecutionId || (eventData.execution_id as string)
                 if (resultExecutionId) {
                   try {
-                    // Create a timeout controller for the fetch
-                    const fetchController = new AbortController()
-                    const timeoutId = setTimeout(
-                      () => fetchController.abort(),
-                      10000
-                    )
-
                     const execResponse = await fetch(
                       `/api/v1/executions/${resultExecutionId}`,
                       {
                         headers: { Accept: "application/json" },
-                        // Combine both abort signals
                         signal: AbortSignal.any([
                           newAbortController.signal,
-                          fetchController.signal
+                          AbortSignal.timeout(10000)
                         ])
                       }
                     )
-                    clearTimeout(timeoutId)
 
                     if (execResponse.ok) {
                       const execData = await execResponse.json()
@@ -286,37 +266,44 @@ export const useChatHandler = () => {
                       )
                     }
                   } catch (e) {
-                    if ((e as Error).name === "AbortError") {
-                      // Distinguish between user cancellation and fetch timeout
-                      if (newAbortController.signal.aborted) {
-                        throw e // User cancelled
-                      }
+                    const errName = (e as Error).name
+                    if (errName === "TimeoutError") {
                       throw new Error("Execution result fetch timed out")
+                    }
+                    if (errName === "AbortError") {
+                      throw e
                     }
                     console.error("Failed to fetch execution result:", e)
                     throw new Error("Failed to fetch execution result")
                   }
                 } else if (eventData.result) {
                   responseText = stringifyResult(eventData.result)
-                } else if (eventData.document?.sections) {
-                  responseText = eventData.document.sections.join("\n\n")
+                } else if (
+                  eventData.document &&
+                  (eventData.document as Record<string, unknown>).sections
+                ) {
+                  responseText = (
+                    (eventData.document as Record<string, unknown>)
+                      .sections as string[]
+                  ).join("\n\n")
                 }
-                // Mark first token received when we have response text
+
                 if (responseText) {
                   setFirstTokenReceived(true)
                 }
-                // Cancel the reader after successful completion - we have the result
-                reader.cancel().catch(() => {})
-                shouldExitLoop = true
-                break // Exit the SSE read loop
+                break
               } else if (eventType === "error") {
-                // Cancel the reader before propagating the error
-                reader.cancel().catch(() => {})
-                throw new Error(eventData.message || "Research failed")
-              }
-              // Handle legacy/direct agent events
-              else if (eventType === "token" || eventType === "content.delta") {
-                const text = eventData.text || eventData.content || ""
+                throw new Error(
+                  (eventData.message as string) || "Research failed"
+                )
+              } else if (
+                eventType === "token" ||
+                eventType === "content.delta"
+              ) {
+                const text =
+                  (eventData.text as string) ||
+                  (eventData.content as string) ||
+                  ""
                 if (text) {
                   responseText += text
                   setFirstTokenReceived(true)
@@ -325,7 +312,10 @@ export const useChatHandler = () => {
                 eventType === "thinking" ||
                 eventType === "thinking.delta"
               ) {
-                const thinkText = eventData.text || eventData.content || ""
+                const thinkText =
+                  (eventData.text as string) ||
+                  (eventData.content as string) ||
+                  ""
                 if (thinkText) {
                   thinkingText += thinkText
                 }
@@ -333,23 +323,27 @@ export const useChatHandler = () => {
                 eventType === "status" ||
                 eventType === "status.changed"
               ) {
-                const msg = eventData.message || eventData.status || ""
+                const msg =
+                  (eventData.message as string) ||
+                  (eventData.status as string) ||
+                  ""
                 if (msg) setToolInUse(msg)
               } else if (
                 eventType === "progress" ||
                 eventType === "progress.updated"
               ) {
-                const step = eventData.currentStep || eventData.step || ""
+                const step =
+                  (eventData.currentStep as string) ||
+                  (eventData.step as string) ||
+                  ""
                 if (step) setToolInUse(step)
               }
             }
 
-            // Compute fullText from accumulators
             const fullText = thinkingText
-              ? `*${thinkingText}*\n\n${responseText}`
-              : responseText
+              ? `*${thinkingText}*\n\n${responseText}${progressNotes || ""}`
+              : `${responseText}${progressNotes || ""}`
 
-            // Update UI with accumulated text
             if (fullText) {
               setChatMessages(prev => {
                 const messages = [...prev]
@@ -358,10 +352,7 @@ export const useChatHandler = () => {
                 if (lastMsg?.message.role === "assistant") {
                   messages[messages.length - 1] = {
                     ...lastMsg,
-                    message: {
-                      ...lastMsg.message,
-                      content: fullText
-                    }
+                    message: { ...lastMsg.message, content: fullText }
                   }
                 } else {
                   messages.push({
@@ -387,12 +378,8 @@ export const useChatHandler = () => {
             }
           }
         } finally {
-          // Ensure reader is cancelled on every exit path
           reader.cancel().catch(() => {})
         }
-
-        // Exit outer loop if we completed or errored
-        if (shouldExitLoop) break
       }
 
       setIsGenerating(false)
@@ -414,7 +401,8 @@ export const useChatHandler = () => {
     sequenceNumber: number
   ) => {
     const filteredMessages = chatMessages.filter(
-      chatMessage => chatMessage.message.sequence_number < sequenceNumber
+      (chatMessage: ChatMessage) =>
+        chatMessage.message.sequence_number < sequenceNumber
     )
 
     setChatMessages(filteredMessages)
