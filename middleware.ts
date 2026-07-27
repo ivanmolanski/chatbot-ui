@@ -12,7 +12,9 @@ export async function middleware(request: NextRequest) {
   console.log("[Middleware] Path:", request.nextUrl.pathname)
   
   // Skip i18n routing for ALL API routes - return early before i18nRouter
-  if (request.nextUrl.pathname.startsWith("/api/")) {
+  // Match exact "/api" path and any "/api/..." sub-paths
+  const pathname = request.nextUrl.pathname
+  if (pathname === "/api" || pathname.startsWith("/api/")) {
     console.log("[Middleware] Skipping i18n for API route")
     return NextResponse.next()
   }
@@ -25,6 +27,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api/|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)"
+    // Match ALL paths including API routes so middleware can run and skip them
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)"
   ]
 }
