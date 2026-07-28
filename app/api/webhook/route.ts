@@ -35,8 +35,15 @@ export function verifyApiKey(request: NextRequest): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  // Debug: log all headers to see what the control plane sends
+  console.log(
+    "[Webhook] Incoming headers:",
+    Object.fromEntries(request.headers.entries())
+  )
+
   // Validate caller with API key (same mechanism as execution events route)
   if (!verifyApiKey(request)) {
+    console.log("[Webhook] Auth failed - API_KEY:", API_KEY ? "set" : "NOT SET")
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
       { status: 401 }
