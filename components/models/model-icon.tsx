@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils"
 import mistral from "@/public/providers/mistral.png"
 import groq from "@/public/providers/groq.png"
 import perplexity from "@/public/providers/perplexity.png"
+import meta from "@/public/providers/meta.png"
 import { ModelProvider } from "@/types"
 import { IconSparkles } from "@tabler/icons-react"
 import { useTheme } from "next-themes"
@@ -96,11 +97,28 @@ export const ModelIcon: FC<ModelIconProps> = ({
             theme === "dark" ? "bg-white" : "border-DEFAULT border-black"
           )}
           src={perplexity.src}
-          alt="Mistral"
+          alt="Perplexity"
           width={width}
           height={height}
         />
       )
+    case "meta":
+      return (
+        <Image
+          className={cn(
+            "rounded-sm p-1",
+            theme === "dark" ? "bg-white" : "border-DEFAULT border-black"
+          )}
+          src={meta.src}
+          alt="Meta"
+          width={width}
+          height={height}
+        />
+      )
+    case "ollama":
+    case "openrouter":
+    case "custom":
+      return <IconSparkles size={width} />
     default:
       return <IconSparkles size={width} />
   }

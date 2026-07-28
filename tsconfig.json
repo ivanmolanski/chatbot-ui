@@ -26,7 +26,12 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "types": [
+      "jest",
+      "@playwright/test",
+      "node"
+    ]
   },
   "include": [
     "next-env.d.ts",
