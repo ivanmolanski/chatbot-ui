@@ -21,35 +21,30 @@ const API_KEY = process.env.AF_API_KEY
 export function verifyApiKey(request: NextRequest): boolean {
   // Fail closed when API key is not configured
   if (!API_KEY) return false
+
+  // Check headers first
   const providedKey =
     request.headers.get("X-API-Key") ||
     request.headers.get("Authorization")?.replace("Bearer ", "")
-  if (!providedKey) return false
+
+  // Also check query parameter (for webhook URL with api_key param)
+  const queryKey = request.nextUrl.searchParams.get("api_key")
+
+  const keyToCheck = providedKey || queryKey
+  if (!keyToCheck) return false
+
   // Constant-time comparison to prevent timing attacks
-  if (providedKey.length !== API_KEY.length) return false
+  if (keyToCheck.length !== API_KEY.length) return false
   let result = 0
-  for (let i = 0; i < providedKey.length; i++) {
-    result |= providedKey.charCodeAt(i) ^ API_KEY.charCodeAt(i)
+  for (let i = 0; i < keyToCheck.length; i++) {
+    result |= keyToCheck.charCodeAt(i) ^ API_KEY.charCodeAt(i)
   }
   return result === 0
 }
 
 export async function POST(request: NextRequest) {
-  // Debug: log all headers to see what the control plane sends
-  const allHeaders = Object.fromEntries(request.headers.entries())
-  console.log(
-    "[Webhook] Incoming headers:",
-    JSON.stringify(allHeaders, null, 2)
-  )
-
   // Validate caller with API key (same mechanism as execution events route)
   if (!verifyApiKey(request)) {
-    console.log("[Webhook] Auth failed - API_KEY:", API_KEY ? "set" : "NOT SET")
-    console.log("[Webhook] X-API-Key header:", request.headers.get("X-API-Key"))
-    console.log(
-      "[Webhook] Authorization header:",
-      request.headers.get("Authorization")
-    )
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
       { status: 401 }
