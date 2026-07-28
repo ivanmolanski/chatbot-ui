@@ -2,12 +2,13 @@
  * Chat Handler — Uses AIPlatformClient for all execution.
  * Replaces the old handler that was coupled to Supabase, DB, and LLM providers.
  * Per ARCHITECTURE.md Phase 2: execute() is the single entry point.
+ * Per ARCHITECTURE.md Phase 7: Durable jobs with polling fallback when SSE fails.
  */
 
 import { ChatbotUIContext } from "@/context/context"
 import { ChatMessage } from "@/types"
 import { useRouter } from "next/navigation"
-import { useContext, useEffect, useRef } from "react"
+import { useContext, useEffect, useRef, useCallback } from "react"
 
 export const useChatHandler = () => {
   const router = useRouter()
@@ -95,6 +96,144 @@ export const useChatHandler = () => {
     }
   }
 
+  /**
+   * Helper to commit assistant message to chat
+   * Extracted from SSE read loop for reuse with polling fallback
+   */
+  const commitAssistantMessage = useCallback(
+    (
+      content: string,
+      setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>,
+      selectedChat: { id: string } | null,
+      chatSettings: { model?: string } | null | undefined
+    ) => {
+      setChatMessages(prev => {
+        const messages = [...prev]
+        const lastMsg = messages[messages.length - 1]
+
+        if (lastMsg?.message.role === "assistant") {
+          messages[messages.length - 1] = {
+            ...lastMsg,
+            message: { ...lastMsg.message, content }
+          }
+        } else {
+          messages.push({
+            message: {
+              chat_id: selectedChat?.id || "",
+              assistant_id: null,
+              content,
+              created_at: new Date().toISOString(),
+              id: `msg_${Date.now()}`,
+              image_paths: [],
+              model: chatSettings?.model || "",
+              role: "assistant",
+              sequence_number: messages.length,
+              updated_at: new Date().toISOString(),
+              user_id: ""
+            },
+            fileItems: []
+          })
+        }
+
+        return messages
+      })
+    },
+    []
+  )
+
+  /**
+   * Poll execution status via REST as fallback when SSE doesn't deliver events.
+   * Per ARCHITECTURE.md Phase 7: Durable jobs support polling/reconnection.
+   */
+  const pollExecutionResult = async (
+    executionId: string,
+    abortSignal: AbortSignal,
+    maxAttempts = 60,
+    intervalMs = 5000
+  ): Promise<string | null> => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (abortSignal.aborted) {
+        throw new DOMException("Aborted", "AbortError")
+      }
+
+      try {
+        const response = await fetch(`/api/v1/executions/${executionId}`, {
+          headers: { Accept: "application/json" },
+          signal: AbortSignal.any([abortSignal, AbortSignal.timeout(10000)])
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const status = data.status || data.execution?.status
+
+          if (status === "completed" || status === "succeeded") {
+            if (data.result) {
+              return typeof data.result === "string"
+                ? data.result
+                : JSON.stringify(data.result, null, 2)
+            }
+            if (data.document?.sections) {
+              return data.document.sections.join("\n\n")
+            }
+            if (data.execution?.result) {
+              return typeof data.execution.result === "string"
+                ? data.execution.result
+                : JSON.stringify(data.execution.result, null, 2)
+            }
+            if (data.execution?.document?.sections) {
+              return data.execution.document.sections.join("\n\n")
+            }
+            return "Research completed but no result content found."
+          }
+
+          if (status === "failed" || status === "error") {
+            // Throw a sentinel error that preserves the real error message
+            const error = new Error(
+              data.error || data.message || "Research failed"
+            )
+            ;(
+              error as Error & { __isTerminalError: boolean }
+            ).__isTerminalError = true
+            throw error
+          }
+
+          // Still running - update status
+          if (status) {
+            setToolInUse(status)
+          }
+        }
+      } catch (e) {
+        if ((e as Error).name === "AbortError") throw e
+        // Check for our sentinel terminal error
+        if ((e as Error & { __isTerminalError?: boolean }).__isTerminalError)
+          throw e
+        console.warn(`Poll attempt ${attempt + 1} failed:`, e)
+      }
+
+      // Wait before next poll - skip delay on final attempt, make cancellable
+      if (attempt < maxAttempts - 1) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(resolve, intervalMs)
+            abortSignal.addEventListener(
+              "abort",
+              () => {
+                clearTimeout(timeout)
+                reject(new DOMException("Aborted", "AbortError"))
+              },
+              { once: true }
+            )
+          })
+        } catch (e) {
+          if ((e as Error).name === "AbortError") throw e
+          throw e
+        }
+      }
+    }
+
+    throw new Error("Polling timeout: execution did not complete in time")
+  }
+
   const handleSendMessage = async (
     messageContent: string,
     chatMessages: ChatMessage[],
@@ -165,14 +304,15 @@ export const useChatHandler = () => {
         )
       }
 
-      // Step 3: Read SSE stream
+      // Step 3: Read SSE stream with polling fallback
+      let thinkingText = ""
+      let responseText = ""
+      let progressNotes = ""
+      let buffer = ""
+
       if (sseResponse.body) {
         const reader = sseResponse.body.getReader()
         const decoder = new TextDecoder()
-        let thinkingText = ""
-        let responseText = ""
-        let progressNotes = ""
-        let buffer = ""
 
         try {
           while (true) {
@@ -345,36 +485,12 @@ export const useChatHandler = () => {
               : `${responseText}${progressNotes || ""}`
 
             if (fullText) {
-              setChatMessages(prev => {
-                const messages = [...prev]
-                const lastMsg = messages[messages.length - 1]
-
-                if (lastMsg?.message.role === "assistant") {
-                  messages[messages.length - 1] = {
-                    ...lastMsg,
-                    message: { ...lastMsg.message, content: fullText }
-                  }
-                } else {
-                  messages.push({
-                    message: {
-                      chat_id: selectedChat?.id || "",
-                      assistant_id: null,
-                      content: fullText,
-                      created_at: new Date().toISOString(),
-                      id: `msg_${Date.now()}`,
-                      image_paths: [],
-                      model: chatSettings?.model || "",
-                      role: "assistant",
-                      sequence_number: messages.length,
-                      updated_at: new Date().toISOString(),
-                      user_id: ""
-                    },
-                    fileItems: []
-                  })
-                }
-
-                return messages
-              })
+              commitAssistantMessage(
+                fullText,
+                setChatMessages,
+                selectedChat,
+                chatSettings
+              )
             }
           }
         } finally {
@@ -382,16 +498,95 @@ export const useChatHandler = () => {
         }
       }
 
+      // Step 4: If SSE didn't deliver completion event, fall back to polling
+      let completionReceived = false
+      if (!responseText && !newAbortController.signal.aborted) {
+        console.log(
+          "[ChatHandler] SSE stream ended without completion, falling back to polling..."
+        )
+        setToolInUse("polling for result...")
+
+        try {
+          const polledResult = await pollExecutionResult(
+            executionId,
+            newAbortController.signal
+          )
+          if (polledResult) {
+            responseText = polledResult
+            completionReceived = true
+            setFirstTokenReceived(true)
+            commitAssistantMessage(
+              responseText,
+              setChatMessages,
+              selectedChat,
+              chatSettings
+            )
+          }
+        } catch (pollError) {
+          if ((pollError as Error).name === "AbortError") {
+            throw pollError
+          }
+          // Check for our sentinel terminal error
+          if (
+            (pollError as Error & { __isTerminalError?: boolean })
+              .__isTerminalError
+          ) {
+            const errorMsg = `Research failed: ${(pollError as Error).message}`
+            commitAssistantMessage(
+              errorMsg,
+              setChatMessages,
+              selectedChat,
+              chatSettings
+            )
+            throw pollError
+          }
+          console.error("Polling fallback failed:", pollError)
+          // Show user-visible error message — commit once, don't rethrow generic
+          const errorMsg = `Research failed: ${(pollError as Error).message}`
+          commitAssistantMessage(
+            errorMsg,
+            setChatMessages,
+            selectedChat,
+            chatSettings
+          )
+          // Reset generation state before returning
+          setIsGenerating(false)
+          setFirstTokenReceived(false)
+          setToolInUse("none")
+          return
+        }
+      }
+
       setIsGenerating(false)
       setFirstTokenReceived(false)
+      setToolInUse("none")
     } catch (error) {
       if ((error as Error).name === "AbortError") {
         // User cancelled
+      } else if (
+        (error as Error & { __isTerminalError?: boolean }).__isTerminalError
+      ) {
+        // Terminal error from polling - show the real error message
+        const errorMsg = `Research failed: ${(error as Error).message}`
+        commitAssistantMessage(
+          errorMsg,
+          setChatMessages,
+          selectedChat,
+          chatSettings
+        )
       } else {
         console.error("Send message error:", error)
+        const errorMsg = `Error: ${(error as Error).message}`
+        commitAssistantMessage(
+          errorMsg,
+          setChatMessages,
+          selectedChat,
+          chatSettings
+        )
       }
       setIsGenerating(false)
       setFirstTokenReceived(false)
+      setToolInUse("none")
       setUserInput(startingInput)
     }
   }

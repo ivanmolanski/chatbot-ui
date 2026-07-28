@@ -21,7 +21,7 @@ async function proxyRequest(
   const fullUrl = searchParams ? `${url}?${searchParams}` : url
 
   const headers = new Headers()
-  headers.set("X-API-Key", API_KEY)
+  headers.set("Authorization", `Bearer ${API_KEY}`)
   headers.set(
     "Content-Type",
     request.headers.get("Content-Type") || "application/json"
