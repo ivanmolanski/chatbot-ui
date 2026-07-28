@@ -299,25 +299,52 @@ export const useChatHandler = () => {
         const errorText = await sseResponse
           .text()
           .catch(() => sseResponse.statusText)
-        throw new Error(
-          `SSE connection failed (${sseResponse.status}): ${errorText}`
+        console.error(
+          `[ChatHandler] SSE connection failed (${sseResponse.status}): ${errorText} — falling back to polling`
         )
+        // Don't throw — sseCompleted stays false, so Step 4 polling runs
       }
 
-      // Step 3: Read SSE stream with polling fallback
+      // Step 3: Read SSE stream with timeout — don't block forever
       let thinkingText = ""
       let responseText = ""
       let progressNotes = ""
       let buffer = ""
+      let sseCompleted = false
 
       if (sseResponse.body) {
         const reader = sseResponse.body.getReader()
         const decoder = new TextDecoder()
 
         try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
+          while (!newAbortController.signal.aborted) {
+            const readPromise = reader.read()
+            let timeoutId: ReturnType<typeof setTimeout> | undefined
+            const timeoutPromise = new Promise<{
+              done: boolean
+              value: Uint8Array | undefined
+            }>((_, reject) => {
+              timeoutId = setTimeout(
+                () => reject(new DOMException("SSE timeout", "TimeoutError")),
+                5000
+              )
+            })
+
+            let result: { done: boolean; value: Uint8Array | undefined }
+            try {
+              result = await Promise.race([readPromise, timeoutPromise])
+            } catch (e) {
+              if ((e as Error).name === "TimeoutError") break // No data for 5s, move to polling
+              throw e
+            } finally {
+              clearTimeout(timeoutId)
+            }
+
+            const { done, value } = result
+            if (done) {
+              sseCompleted = true
+              break
+            }
 
             buffer += decoder.decode(value, { stream: true })
 
@@ -344,139 +371,74 @@ export const useChatHandler = () => {
               const eventType = (event.type as string) || ""
               const eventData = (event.data as Record<string, unknown>) || event
 
-              const eventExecutionId =
-                (eventData.execution_id as string) ||
-                (event.executionId as string) ||
-                (event.execution_id as string)
-              if (eventExecutionId && eventExecutionId !== executionId) {
-                continue
-              }
-
               if (eventType === "execution_updated") {
                 const status = (eventData.status as string) || ""
                 if (status) setToolInUse(status)
               } else if (eventType === "workflow_note_added") {
-                const noteData = eventData.note as
-                  Record<string, unknown> | undefined
-                const note =
-                  (noteData?.message as string) ||
-                  (eventData.message as string) ||
-                  ""
+                const note = (eventData.message as string) || ""
                 if (note) {
                   setToolInUse(note)
-                  if (!progressNotes) progressNotes = ""
                   progressNotes += `\n\n${note}`
                   setFirstTokenReceived(true)
                 }
-              } else if (
-                eventType === "execution_completed" ||
-                eventType === "execution.failed"
-              ) {
-                if (eventType === "execution.failed") {
-                  throw new Error(
-                    (eventData.message as string) || "Research failed"
+              } else if (eventType === "execution_completed") {
+                // Fetch the actual result
+                let fetchedResult = false
+                try {
+                  const execResponse = await fetch(
+                    `/api/v1/executions/${executionId}`,
+                    {
+                      headers: { Accept: "application/json" },
+                      signal: AbortSignal.any([
+                        newAbortController.signal,
+                        AbortSignal.timeout(10000)
+                      ])
+                    }
                   )
-                }
-
-                const resultExecutionId =
-                  eventExecutionId || (eventData.execution_id as string)
-                if (resultExecutionId) {
-                  try {
-                    const execResponse = await fetch(
-                      `/api/v1/executions/${resultExecutionId}`,
-                      {
-                        headers: { Accept: "application/json" },
-                        signal: AbortSignal.any([
-                          newAbortController.signal,
-                          AbortSignal.timeout(10000)
-                        ])
-                      }
-                    )
-
-                    if (execResponse.ok) {
-                      const execData = await execResponse.json()
-                      if (execData.result) {
-                        responseText = stringifyResult(execData.result)
-                      } else if (execData.document?.sections) {
-                        responseText = execData.document.sections.join("\n\n")
-                      }
-                    } else {
-                      throw new Error(
-                        `Failed to fetch execution: ${execResponse.status}`
-                      )
+                  if (execResponse.ok) {
+                    const execData = await execResponse.json()
+                    if (execData.result) {
+                      responseText = stringifyResult(execData.result)
+                      fetchedResult = true
+                    } else if (execData.document?.sections) {
+                      responseText = execData.document.sections.join("\n\n")
+                      fetchedResult = true
+                    } else if (execData.execution?.result) {
+                      responseText = stringifyResult(execData.execution.result)
+                      fetchedResult = true
                     }
-                  } catch (e) {
-                    const errName = (e as Error).name
-                    if (errName === "TimeoutError") {
-                      throw new Error("Execution result fetch timed out")
-                    }
-                    if (errName === "AbortError") {
-                      throw e
-                    }
-                    console.error("Failed to fetch execution result:", e)
-                    throw new Error("Failed to fetch execution result")
                   }
-                } else if (eventData.result) {
-                  responseText = stringifyResult(eventData.result)
-                } else if (
-                  eventData.document &&
-                  (eventData.document as Record<string, unknown>).sections
-                ) {
-                  responseText = (
-                    (eventData.document as Record<string, unknown>)
-                      .sections as string[]
-                  ).join("\n\n")
+                } catch (e) {
+                  console.error("Failed to fetch execution result:", e)
                 }
-
-                if (responseText) {
-                  setFirstTokenReceived(true)
+                if (fetchedResult) {
+                  sseCompleted = true
+                  // Commit the result to UI before stopping the loop
+                  const fullText = thinkingText
+                    ? `*${thinkingText}*\n\n${responseText}${progressNotes || ""}`
+                    : `${responseText}${progressNotes || ""}`
+                  if (fullText) {
+                    commitAssistantMessage(
+                      fullText,
+                      setChatMessages,
+                      selectedChat,
+                      chatSettings
+                    )
+                  }
+                  // Stop the outer while loop — result obtained
+                  reader.cancel().catch(() => {})
+                  // Signal outer loop to stop via a sentinel
+                  throw new DOMException("Result obtained", "ResultObtained")
                 }
+                // fetch failed or no result shape matched — keep sseCompleted false so polling runs
                 break
-              } else if (eventType === "error") {
+              } else if (
+                eventType === "execution.failed" ||
+                eventType === "error"
+              ) {
                 throw new Error(
                   (eventData.message as string) || "Research failed"
                 )
-              } else if (
-                eventType === "token" ||
-                eventType === "content.delta"
-              ) {
-                const text =
-                  (eventData.text as string) ||
-                  (eventData.content as string) ||
-                  ""
-                if (text) {
-                  responseText += text
-                  setFirstTokenReceived(true)
-                }
-              } else if (
-                eventType === "thinking" ||
-                eventType === "thinking.delta"
-              ) {
-                const thinkText =
-                  (eventData.text as string) ||
-                  (eventData.content as string) ||
-                  ""
-                if (thinkText) {
-                  thinkingText += thinkText
-                }
-              } else if (
-                eventType === "status" ||
-                eventType === "status.changed"
-              ) {
-                const msg =
-                  (eventData.message as string) ||
-                  (eventData.status as string) ||
-                  ""
-                if (msg) setToolInUse(msg)
-              } else if (
-                eventType === "progress" ||
-                eventType === "progress.updated"
-              ) {
-                const step =
-                  (eventData.currentStep as string) ||
-                  (eventData.step as string) ||
-                  ""
-                if (step) setToolInUse(step)
               }
             }
 
@@ -500,7 +462,7 @@ export const useChatHandler = () => {
 
       // Step 4: If SSE didn't deliver completion event, fall back to polling
       let completionReceived = false
-      if (!responseText && !newAbortController.signal.aborted) {
+      if (!sseCompleted && !newAbortController.signal.aborted) {
         console.log(
           "[ChatHandler] SSE stream ended without completion, falling back to polling..."
         )
@@ -563,6 +525,8 @@ export const useChatHandler = () => {
     } catch (error) {
       if ((error as Error).name === "AbortError") {
         // User cancelled
+      } else if ((error as Error).name === "ResultObtained") {
+        // Result fetched successfully via execution_completed — normal exit
       } else if (
         (error as Error & { __isTerminalError?: boolean }).__isTerminalError
       ) {
