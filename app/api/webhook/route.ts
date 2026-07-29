@@ -16,7 +16,7 @@ import {
   getStoreStats
 } from "@/lib/execution-event-store"
 
-const API_KEY = process.env.AF_API_KEY
+const API_KEY = process.env.AGENTFIELD_API_KEY || process.env.AF_API_KEY
 
 export function verifyApiKey(request: NextRequest): boolean {
   // Fail closed when API key is not configured

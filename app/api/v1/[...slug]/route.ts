@@ -7,8 +7,9 @@
 
 import { NextRequest, NextResponse } from "next/server"
 
-const BACKEND_URL = process.env.AF_CONTROL_PLANE_URL!
-const API_KEY = process.env.AF_API_KEY!
+const BACKEND_URL =
+  process.env.AF_CONTROL_PLANE_URL || process.env.CONTROL_PLANE_URL!
+const API_KEY = process.env.AGENTFIELD_API_KEY || process.env.AF_API_KEY!
 
 async function proxyRequest(
   request: NextRequest,

@@ -10,10 +10,13 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
   // Validate required env vars at handler start
-  const BACKEND_URL = process.env.AF_CONTROL_PLANE_URL
-  const API_KEY = process.env.AF_API_KEY
+  const BACKEND_URL =
+    process.env.AF_CONTROL_PLANE_URL || process.env.CONTROL_PLANE_URL
+  const API_KEY = process.env.AGENTFIELD_API_KEY || process.env.AF_API_KEY
   if (!BACKEND_URL || !API_KEY) {
-    console.error("[SSE Proxy] Missing AF_CONTROL_PLANE_URL or AF_API_KEY")
+    console.error(
+      "[SSE Proxy] Missing AF_CONTROL_PLANE_URL/CONTROL_PLANE_URL or AGENTFIELD_API_KEY/AF_API_KEY"
+    )
     return new NextResponse("Server configuration error", { status: 500 })
   }
 
