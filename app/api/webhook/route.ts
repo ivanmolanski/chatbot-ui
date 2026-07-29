@@ -20,26 +20,52 @@ const API_KEY = process.env.AGENTFIELD_API_KEY || process.env.AF_API_KEY
 
 export function verifyApiKey(request: NextRequest): boolean {
   // Fail closed when API key is not configured
-  if (!API_KEY) return false
+  if (!API_KEY) {
+    console.log("[Webhook Auth] API_KEY not configured")
+    return false
+  }
 
   // Check headers first
-  const providedKey =
-    request.headers.get("X-API-Key") ||
-    request.headers.get("Authorization")?.replace("Bearer ", "")
+  const xApiKey = request.headers.get("X-API-Key")
+  const authHeader = request.headers.get("Authorization")
+  const providedKey = xApiKey || authHeader?.replace("Bearer ", "")
 
   // Also check query parameter (for webhook URL with api_key param)
   const queryKey = request.nextUrl.searchParams.get("api_key")
 
+  // DEBUG: Log all auth-related info
+  console.log("[Webhook Auth] DEBUG:", {
+    hasApiKey: !!API_KEY,
+    apiKeyLength: API_KEY.length,
+    xApiKey: xApiKey ? `${xApiKey.substring(0, 4)}...` : null,
+    authHeader: authHeader ? `${authHeader.substring(0, 20)}...` : null,
+    queryKey: queryKey ? `${queryKey.substring(0, 4)}...` : null,
+    url: request.nextUrl.toString(),
+    allHeaders: Object.fromEntries(request.headers.entries())
+  })
+
   const keyToCheck = providedKey || queryKey
-  if (!keyToCheck) return false
+  if (!keyToCheck) {
+    console.log("[Webhook Auth] No key provided in headers or query params")
+    return false
+  }
 
   // Constant-time comparison to prevent timing attacks
-  if (keyToCheck.length !== API_KEY.length) return false
+  if (keyToCheck.length !== API_KEY.length) {
+    console.log(
+      `[Webhook Auth] Key length mismatch: provided=${keyToCheck.length}, expected=${API_KEY.length}`
+    )
+    return false
+  }
   let result = 0
   for (let i = 0; i < keyToCheck.length; i++) {
     result |= keyToCheck.charCodeAt(i) ^ API_KEY.charCodeAt(i)
   }
-  return result === 0
+  const passed = result === 0
+  if (!passed) {
+    console.log("[Webhook Auth] Key comparison failed (constant-time)")
+  }
+  return passed
 }
 
 export async function POST(request: NextRequest) {
