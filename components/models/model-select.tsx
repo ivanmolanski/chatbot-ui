@@ -16,7 +16,6 @@ import {
   DropdownMenuTrigger
 } from "../ui/dropdown-menu"
 import { Input } from "../ui/input"
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs"
 import { ModelIcon } from "./model-icon"
 import { ModelOption } from "./model-option"
 
@@ -66,9 +65,7 @@ export const ModelSelect: FC<ModelSelectProps> = ({
   const {
     profile,
     models,
-    availableHostedModels,
-    availableLocalModels,
-    availableOpenRouterModels
+    availableHostedModels
   } = useContext(ChatbotUIContext)
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -76,8 +73,6 @@ export const ModelSelect: FC<ModelSelectProps> = ({
 
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState("")
-  const [tab, setTab] = useState<"hosted" | "local">("hosted")
-
   const dropdownWidth = useTriggerWidth(triggerRef, isOpen)
 
   useEffect(() => {
@@ -102,9 +97,7 @@ export const ModelSelect: FC<ModelSelectProps> = ({
       platformLink: "",
       imageInput: false
     })),
-    ...availableHostedModels,
-    ...availableLocalModels,
-    ...availableOpenRouterModels
+    ...availableHostedModels
   ]
 
   const groupedModels = allModels.reduce<Record<string, LLM[]>>(
@@ -178,11 +171,7 @@ export const ModelSelect: FC<ModelSelectProps> = ({
         <div className="max-h-[300px] overflow-auto">
           {Object.entries(groupedModels).map(([provider, models]) => {
             const filteredModels = models
-              .filter(model => {
-                if (tab === "hosted") return model.provider !== "ollama"
-                if (tab === "local") return model.provider === "ollama"
-                if (tab === "openrouter") return model.provider === "openrouter"
-              })
+              .filter(() => true)
               .filter(model =>
                 model.modelName.toLowerCase().includes(search.toLowerCase())
               )

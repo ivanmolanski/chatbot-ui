@@ -50,8 +50,6 @@ export const Message: FC<MessageProps> = ({
     setIsGenerating,
     firstTokenReceived,
     availableHostedModels,
-    availableLocalModels,
-    availableOpenRouterModels,
     chatMessages,
     selectedAssistant,
     chatImages,
@@ -132,9 +130,7 @@ export const Message: FC<MessageProps> = ({
       platformLink: "",
       imageInput: false
     })),
-    ...availableHostedModels,
-    ...availableLocalModels,
-    ...availableOpenRouterModels
+    ...availableHostedModels
   ]
 
   const modelDetails = MODEL_DATA.find((m: any) => m.modelId === message.model)

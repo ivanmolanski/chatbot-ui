@@ -13,11 +13,33 @@ export async function GET(request: NextRequest) {
   const BACKEND_URL =
     process.env.AF_CONTROL_PLANE_URL || process.env.CONTROL_PLANE_URL
   const API_KEY = process.env.AGENTFIELD_API_KEY || process.env.AF_API_KEY
+  const diagnostics = {
+    provider:
+      process.env.AF_PROVIDER || process.env.LITELLM_PROVIDER || "openrouter",
+    model:
+      process.env.AF_DEFAULT_MODEL ||
+      process.env.DEFAULT_MODEL ||
+      process.env.OPENROUTER_DEFAULT_MODEL ||
+      "",
+    apiBase:
+      process.env.OPENROUTER_API_BASE || process.env.LITELLM_API_BASE || "",
+    hasOpenRouterApiKey: Boolean(process.env.OPENROUTER_API_KEY),
+    hasBackendUrl: Boolean(BACKEND_URL),
+    hasProxyApiKey: Boolean(API_KEY)
+  }
   if (!BACKEND_URL || !API_KEY) {
     console.error(
-      "[SSE Proxy] Missing AF_CONTROL_PLANE_URL/CONTROL_PLANE_URL or AGENTFIELD_API_KEY/AF_API_KEY"
+      "[SSE Proxy] Missing AF_CONTROL_PLANE_URL/CONTROL_PLANE_URL or AGENTFIELD_API_KEY/AF_API_KEY",
+      diagnostics
     )
-    return new NextResponse("Server configuration error", { status: 500 })
+    return NextResponse.json(
+      {
+        error:
+          "Missing required control-plane configuration: AF_CONTROL_PLANE_URL/CONTROL_PLANE_URL and AGENTFIELD_API_KEY/AF_API_KEY are required.",
+        diagnostics
+      },
+      { status: 500 }
+    )
   }
 
   const rawExecutionId = request.nextUrl.searchParams.get("execution_id")
@@ -48,7 +70,8 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text().catch(() => response.statusText)
       console.error(
-        `[SSE Proxy] Control plane error ${response.status}: ${errorText}`
+        `[SSE Proxy] Control plane error ${response.status}: ${errorText}`,
+        diagnostics
       )
       // Map 401/403 to 502 so callers don't retry auth against the proxy
       const clientStatus =

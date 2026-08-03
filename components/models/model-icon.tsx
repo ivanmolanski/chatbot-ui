@@ -115,8 +115,6 @@ export const ModelIcon: FC<ModelIconProps> = ({
           height={height}
         />
       )
-    case "ollama":
-    case "openrouter":
     case "custom":
       return <IconSparkles size={width} />
     default:

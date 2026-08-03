@@ -11,11 +11,57 @@ const BACKEND_URL =
   process.env.AF_CONTROL_PLANE_URL || process.env.CONTROL_PLANE_URL!
 const API_KEY = process.env.AGENTFIELD_API_KEY || process.env.AF_API_KEY!
 
+function getRequestDiagnostics() {
+  const configuredModel =
+    process.env.AF_DEFAULT_MODEL ||
+    process.env.DEFAULT_MODEL ||
+    process.env.OPENROUTER_DEFAULT_MODEL ||
+    ""
+  const provider =
+    process.env.AF_PROVIDER || process.env.LITELLM_PROVIDER || "openrouter"
+  const apiBase =
+    process.env.OPENROUTER_API_BASE || process.env.LITELLM_API_BASE || ""
+
+  return {
+    provider,
+    model: configuredModel,
+    apiBase,
+    hasOpenRouterApiKey: Boolean(process.env.OPENROUTER_API_KEY),
+    hasBackendUrl: Boolean(BACKEND_URL),
+    hasProxyApiKey: Boolean(API_KEY)
+  }
+}
+
 async function proxyRequest(
   request: NextRequest,
   slug: string[],
   method: string
 ) {
+  if (!BACKEND_URL || !API_KEY) {
+    const diagnostics = getRequestDiagnostics()
+    console.error("[AF Proxy] Missing required control-plane configuration", {
+      ...diagnostics,
+      path: slug.join("/"),
+      envSource: {
+        backendUrl: process.env.AF_CONTROL_PLANE_URL
+          ? "AF_CONTROL_PLANE_URL"
+          : "CONTROL_PLANE_URL",
+        apiKey: process.env.AGENTFIELD_API_KEY
+          ? "AGENTFIELD_API_KEY"
+          : "AF_API_KEY"
+      }
+    })
+
+    return NextResponse.json(
+      {
+        error:
+          "Missing required control-plane configuration: AF_CONTROL_PLANE_URL/CONTROL_PLANE_URL and AGENTFIELD_API_KEY/AF_API_KEY are required.",
+        diagnostics
+      },
+      { status: 500 }
+    )
+  }
+
   const path = slug.join("/")
   const url = `${BACKEND_URL}/api/v1/${path}`
   const searchParams = request.nextUrl.searchParams.toString()
@@ -44,6 +90,15 @@ async function proxyRequest(
     body:
       method !== "GET" && method !== "DELETE" ? await request.text() : undefined
   })
+
+  if (!response.ok) {
+    console.error("[AF Proxy] Upstream request failed", {
+      path,
+      method,
+      status: response.status,
+      ...getRequestDiagnostics()
+    })
+  }
 
   // Pass through streaming responses directly — use includes() to handle
   // Accept headers like "text/event-stream, text/plain" or "*/*"

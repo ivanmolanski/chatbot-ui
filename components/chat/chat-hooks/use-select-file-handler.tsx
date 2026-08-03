@@ -23,8 +23,6 @@ export const useSelectFileHandler = () => {
     chatSettings,
     models,
     availableHostedModels,
-    availableLocalModels,
-    availableOpenRouterModels,
     setNewMessageImages,
     setNewMessageFiles,
     setShowFilesDisplay,
@@ -47,9 +45,7 @@ export const useSelectFileHandler = () => {
         platformLink: "",
         imageInput: false
       })),
-      ...availableHostedModels,
-      ...availableLocalModels,
-      ...availableOpenRouterModels
+      ...availableHostedModels
     ]
     const matched = allModels.find(m => m.modelId === modelId)
     return matched?.imageInput
@@ -58,9 +54,7 @@ export const useSelectFileHandler = () => {
   }, [
     chatSettings?.model,
     models,
-    availableHostedModels,
-    availableLocalModels,
-    availableOpenRouterModels
+    availableHostedModels
   ])
 
   // Check whether the current model supports image uploads
@@ -76,17 +70,13 @@ export const useSelectFileHandler = () => {
         platformLink: "",
         imageInput: false
       })),
-      ...availableHostedModels,
-      ...availableLocalModels,
-      ...availableOpenRouterModels
+      ...availableHostedModels
     ]
     return allModels.find(m => m.modelId === modelId)?.imageInput ?? false
   }, [
     chatSettings?.model,
     models,
-    availableHostedModels,
-    availableLocalModels,
-    availableOpenRouterModels
+    availableHostedModels
   ])
 
   const handleSelectDeviceFile = async (file: File) => {
