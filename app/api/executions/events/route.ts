@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getEvents } from "@/lib/execution-event-store"
 
 const KEEPALIVE_MS = 15_000
-const INACTIVITY_MS = 5_000
+const INACTIVITY_MS = 30_000 // control plane may be silent for 10s+ between events
 const POLL_INTERVAL_MS = 2_000
 const POLL_DEADLINE_MS = 5 * 60 * 1_000 // 5 min, counted from fallback start
 
@@ -22,15 +22,15 @@ function abortAwareDelay(ms: number, signal: AbortSignal): Promise<void> {
       reject(new DOMException("Aborted", "AbortError"))
       return
     }
-    const t = setTimeout(resolve, ms)
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(t)
-        reject(new DOMException("Aborted", "AbortError"))
-      },
-      { once: true }
-    )
+    const onAbort = () => {
+      clearTimeout(t)
+      reject(new DOMException("Aborted", "AbortError"))
+    }
+    const t = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort)
+      resolve()
+    }, ms)
+    signal.addEventListener("abort", onAbort, { once: true })
   })
 }
 
@@ -64,22 +64,27 @@ export async function GET(request: NextRequest) {
       let closed = false
       let keepaliveTimer: ReturnType<typeof setInterval> | null = null
 
+      const clearKeepalive = (): void => {
+        if (keepaliveTimer !== null) {
+          clearInterval(keepaliveTimer)
+          keepaliveTimer = null
+        }
+      }
+
       const send = (text: string): void => {
         if (closed) return
         try {
           controller.enqueue(encoder.encode(text))
         } catch {
           closed = true
+          clearKeepalive()
         }
       }
 
       const close = (): void => {
         if (closed) return
         closed = true
-        if (keepaliveTimer !== null) {
-          clearInterval(keepaliveTimer)
-          keepaliveTimer = null
-        }
+        clearKeepalive()
         try {
           controller.close()
         } catch {}
@@ -112,6 +117,10 @@ export async function GET(request: NextRequest) {
           const reader = response.body.getReader()
           const decoder = new TextDecoder()
           let buffer = ""
+          // State persists across chunks so events split over multiple reads are assembled correctly
+          let dataLines: string[] = []
+          let currentId: string | undefined
+          let currentType = "message"
 
           try {
             while (!abortSignal.aborted) {
@@ -143,10 +152,6 @@ export async function GET(request: NextRequest) {
               // WHATWG-compliant SSE parser (handles CRLF and LF)
               const lines = buffer.split(/\r?\n/)
               buffer = lines.pop() ?? ""
-
-              let dataLines: string[] = []
-              let currentId: string | undefined
-              let currentType = "message"
 
               for (const line of lines) {
                 const raw = line.replace(/\r$/, "")
@@ -225,6 +230,7 @@ export async function GET(request: NextRequest) {
             data: event.data
           }
           if (event.id) send(`id: ${event.id}\n`)
+          if (event.type && event.type !== "message") send(`event: ${event.type}\n`)
           send(`data: ${JSON.stringify(cloudEvent)}\n\n`)
           if (event.id) pollCursor = event.id
         }
