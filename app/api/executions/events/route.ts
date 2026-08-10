@@ -2,7 +2,7 @@
  * SSE Proxy for Execution Events — per arch2.md §2.2 / §5.
  *
  * Phase 1: Streams CloudEvents from control plane SSE with keepalive pings.
- *          Falls through after control plane closes, errors, or 5 s inactivity.
+ *          Falls through after control plane closes, errors, or 30 s inactivity.
  * Phase 2: Polls the shared event store (populated by webhook) for up to 5 min.
  *
  * Ref: arch2.md — "SSE Proxy with Fallback" and "Progress-Reading Flow (Fixed Cancellation)"
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
           let currentType = "message"
 
           try {
-            while (!abortSignal.aborted) {
+            while (!abortSignal.aborted && !closed) {
               let timerHandle: ReturnType<typeof setTimeout> | undefined
 
               const chunk = await Promise.race([
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
       const pollDeadline = Date.now() + POLL_DEADLINE_MS
       let pollCursor = lastEventId
 
-      while (!abortSignal.aborted && Date.now() < pollDeadline) {
+      while (!abortSignal.aborted && !closed && Date.now() < pollDeadline) {
         const newEvents = getEvents(executionId, pollCursor)
 
         for (const event of newEvents) {
