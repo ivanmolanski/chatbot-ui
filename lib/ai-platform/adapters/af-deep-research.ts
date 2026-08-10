@@ -18,8 +18,23 @@ import type {
 import type { ExecuteParams } from "../client"
 import type { ExecutionEvent } from "../events/types"
 
-const CONTROL_PLANE_URL = process.env.AF_CONTROL_PLANE_URL!
-const API_KEY = process.env.AF_API_KEY!
+// In the browser there is no AF_CONTROL_PLANE_URL: it is a server-only variable (no
+// NEXT_PUBLIC_ prefix), so reading it client-side yielded the string "undefined" and
+// produced requests to "/undefined/api/v1/..." that 404'd.
+//
+// The intended topology (arch2 §2.1) is that the browser always talks to this app's own
+// /api/* proxy routes, which inject the Bearer credential and forward to the control
+// plane. So use an empty base client-side, which makes every URL below relative.
+const CONTROL_PLANE_URL =
+  typeof window === "undefined" ? (process.env.AF_CONTROL_PLANE_URL ?? "") : ""
+const API_KEY = process.env.AF_API_KEY
+
+// Only attach credentials when running on the server. In the browser the proxy adds them,
+// and the key is not (and must not be) present in the bundle.
+const authHeaders = (): Record<string, string> =>
+  API_KEY && typeof window === "undefined"
+    ? { Authorization: `Bearer ${API_KEY}` }
+    : {}
 
 export class AFDeepResearchAdapter implements BackendAdapter {
   readonly backendType = "af-deep-research"
@@ -33,22 +48,26 @@ export class AFDeepResearchAdapter implements BackendAdapter {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
-        Accept: "text/event-stream"
+        ...authHeaders(),
+        Accept: "application/json"
       },
+      // The control plane requires the arguments nested under "input" -- a flat body is
+      // silently missing the query. See af-deep-research README ("Submit").
       body: JSON.stringify({
-        query: params.input.content,
-        mode: (params.config?.mode as string) || "deep",
-        research_focus: params.config?.researchFocus,
-        research_scope: params.config?.researchScope,
-        max_research_loops: params.config?.maxResearchLoops,
-        num_parallel_streams: params.config?.parallelStreams,
-        tension_lens: params.config?.tensionLens,
-        source_strictness: params.config?.sourceStrictness,
-        evidence_style: params.config?.evidenceStyle,
-        analysis_depth: params.config?.analysisDepth,
-        model: params.config?.model,
-        api_key: params.config?.apiKey
+        input: {
+          query: params.input.content,
+          mode: (params.config?.mode as string) || "deep",
+          research_focus: params.config?.researchFocus,
+          research_scope: params.config?.researchScope,
+          max_research_loops: params.config?.maxResearchLoops,
+          num_parallel_streams: params.config?.parallelStreams,
+          tension_lens: params.config?.tensionLens,
+          source_strictness: params.config?.sourceStrictness,
+          evidence_style: params.config?.evidenceStyle,
+          analysis_depth: params.config?.analysisDepth,
+          model: params.config?.model,
+          api_key: params.config?.apiKey
+        }
       })
     })
 
@@ -59,7 +78,7 @@ export class AFDeepResearchAdapter implements BackendAdapter {
     const response = await fetch(
       `${CONTROL_PLANE_URL}/api/v1/executions/${executionId}`,
       {
-        headers: { "X-API-Key": API_KEY }
+        headers: authHeaders()
       }
     )
     const data = await response.json()
@@ -71,7 +90,7 @@ export class AFDeepResearchAdapter implements BackendAdapter {
       `${CONTROL_PLANE_URL}/api/v1/executions/${executionId}/cancel`,
       {
         method: "POST",
-        headers: { "X-API-Key": API_KEY }
+        headers: authHeaders()
       }
     )
   }
@@ -86,7 +105,7 @@ export class AFDeepResearchAdapter implements BackendAdapter {
     const response = await fetch(
       `${CONTROL_PLANE_URL}/api/v1/conversations?${query}`,
       {
-        headers: { "X-API-Key": API_KEY }
+        headers: authHeaders()
       }
     )
     const data = await response.json()
@@ -108,7 +127,7 @@ export class AFDeepResearchAdapter implements BackendAdapter {
     const response = await fetch(
       `${CONTROL_PLANE_URL}/api/v1/conversations/${conversationId}/messages?${query}`,
       {
-        headers: { "X-API-Key": API_KEY }
+        headers: authHeaders()
       }
     )
     const data = await response.json()
@@ -121,9 +140,15 @@ export class AFDeepResearchAdapter implements BackendAdapter {
 
   async getCapabilities(): Promise<PlatformCapabilities> {
     try {
-      const response = await fetch(`${CONTROL_PLANE_URL}/api/v1/capabilities`, {
-        headers: { "X-API-Key": API_KEY }
-      })
+      // The control plane exposes live agent capabilities at
+      // /api/v1/discovery/capabilities. /api/v1/capabilities does not exist and 404s.
+      const response = await fetch(
+        `${CONTROL_PLANE_URL}/api/v1/discovery/capabilities`,
+        {
+          headers: authHeaders()
+        }
+      )
+      if (!response.ok) throw new Error(`Capabilities failed: ${response.status}`)
       return response.json()
     } catch {
       // Fallback: return known capabilities
