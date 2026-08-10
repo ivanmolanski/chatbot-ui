@@ -97,6 +97,60 @@ export const useChatHandler = () => {
   }
 
   /**
+   * Render a finished research package as readable markdown.
+   *
+   * The backend returns a structured research_package (document_title,
+   * executive_summary, sections[], source_notes[]) -- dumping that raw JSON into the
+   * chat is unreadable, so format it. Falls back to JSON for unknown shapes.
+   */
+  const renderResearchResult = useCallback((result: unknown): string => {
+    if (typeof result === "string") return result
+    if (!result || typeof result !== "object") return String(result ?? "")
+
+    const root = result as Record<string, any>
+    const pkg = root.research_package ?? root
+    if (!pkg || typeof pkg !== "object") return JSON.stringify(result, null, 2)
+
+    const parts: string[] = []
+
+    if (pkg.document_title) parts.push(`# ${pkg.document_title}`)
+    if (pkg.executive_summary) {
+      parts.push(`## Executive summary\n\n${pkg.executive_summary}`)
+    }
+
+    if (Array.isArray(pkg.sections)) {
+      for (const section of pkg.sections) {
+        if (typeof section === "string") {
+          parts.push(section)
+        } else if (section && typeof section === "object") {
+          const title = section.title ? `## ${section.title}\n\n` : ""
+          parts.push(`${title}${section.content ?? ""}`)
+        }
+      }
+    }
+
+    if (Array.isArray(pkg.source_notes) && pkg.source_notes.length > 0) {
+      const sources = pkg.source_notes
+        .map((note: any, index: number) => {
+          const id = note?.citation_id ?? index + 1
+          const title = note?.title ?? note?.url ?? "Untitled source"
+          const domain = note?.domain ? ` — ${note.domain}` : ""
+          return `${id}. ${title}${domain}`
+        })
+        .join("\n")
+      parts.push(`## Sources\n\n${sources}`)
+    }
+
+    const metadata = root.metadata ?? pkg.metadata
+    if (metadata?.final_quality_score !== undefined) {
+      parts.push(`_Quality score: ${metadata.final_quality_score}_`)
+    }
+
+    const rendered = parts.filter(Boolean).join("\n\n").trim()
+    return rendered || JSON.stringify(result, null, 2)
+  }, [])
+
+  /**
    * Helper to commit assistant message to chat
    * Extracted from SSE read loop for reuse with polling fallback
    */
@@ -168,17 +222,13 @@ export const useChatHandler = () => {
 
           if (status === "completed" || status === "succeeded") {
             if (data.result) {
-              return typeof data.result === "string"
-                ? data.result
-                : JSON.stringify(data.result, null, 2)
+              return renderResearchResult(data.result)
             }
             if (data.document?.sections) {
               return data.document.sections.join("\n\n")
             }
             if (data.execution?.result) {
-              return typeof data.execution.result === "string"
-                ? data.execution.result
-                : JSON.stringify(data.execution.result, null, 2)
+              return renderResearchResult(data.execution.result)
             }
             if (data.execution?.document?.sections) {
               return data.execution.document.sections.join("\n\n")
@@ -241,9 +291,6 @@ export const useChatHandler = () => {
   ) => {
     const startingInput = messageContent
 
-    const stringifyResult = (result: unknown): string =>
-      typeof result === "string" ? result : JSON.stringify(result, null, 2)
-
     try {
       setUserInput("")
       setIsGenerating(true)
@@ -251,6 +298,29 @@ export const useChatHandler = () => {
       setIsPromptPickerOpen(false)
       setIsFilePickerOpen(false)
       setNewMessageImages([])
+
+      // Show the user's own message immediately. Research runs for many minutes, and
+      // without this the screen stays completely empty the whole time, which is
+      // indistinguishable from the app being broken.
+      setChatMessages(prev => [
+        ...prev,
+        {
+          message: {
+            chat_id: selectedChat?.id || "",
+            assistant_id: null,
+            content: messageContent,
+            created_at: new Date().toISOString(),
+            id: `msg_user_${Date.now()}`,
+            image_paths: [],
+            model: chatSettings?.model || "",
+            role: "user",
+            sequence_number: prev.length,
+            updated_at: new Date().toISOString(),
+            user_id: ""
+          },
+          fileItems: []
+        }
+      ])
 
       const newAbortController = new AbortController()
       setAbortController(newAbortController)
@@ -380,6 +450,14 @@ export const useChatHandler = () => {
                   setToolInUse(note)
                   progressNotes += `\n\n${note}`
                   setFirstTokenReceived(true)
+                  // Surface progress live. Research takes many minutes, so the notes are
+                  // the only feedback the user gets until the document is ready.
+                  commitAssistantMessage(
+                    `_Researching…_\n${progressNotes}`,
+                    setChatMessages,
+                    selectedChat,
+                    chatSettings
+                  )
                 }
               } else if (eventType === "execution_completed") {
                 // Fetch the actual result
@@ -398,13 +476,15 @@ export const useChatHandler = () => {
                   if (execResponse.ok) {
                     const execData = await execResponse.json()
                     if (execData.result) {
-                      responseText = stringifyResult(execData.result)
+                      responseText = renderResearchResult(execData.result)
                       fetchedResult = true
                     } else if (execData.document?.sections) {
                       responseText = execData.document.sections.join("\n\n")
                       fetchedResult = true
                     } else if (execData.execution?.result) {
-                      responseText = stringifyResult(execData.execution.result)
+                      responseText = renderResearchResult(
+                        execData.execution.result
+                      )
                       fetchedResult = true
                     }
                   }
@@ -415,8 +495,8 @@ export const useChatHandler = () => {
                   sseCompleted = true
                   // Commit the result to UI before stopping the loop
                   const fullText = thinkingText
-                    ? `*${thinkingText}*\n\n${responseText}${progressNotes || ""}`
-                    : `${responseText}${progressNotes || ""}`
+                    ? `*${thinkingText}*\n\n${responseText}`
+                    : responseText
                   if (fullText) {
                     commitAssistantMessage(
                       fullText,
@@ -443,8 +523,8 @@ export const useChatHandler = () => {
             }
 
             const fullText = thinkingText
-              ? `*${thinkingText}*\n\n${responseText}${progressNotes || ""}`
-              : `${responseText}${progressNotes || ""}`
+              ? `*${thinkingText}*\n\n${responseText}`
+              : responseText
 
             if (fullText) {
               commitAssistantMessage(
