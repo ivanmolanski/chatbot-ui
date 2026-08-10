@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "engines": {
-    "node": "22"
+    "node": "26.7.0"
   },
   "scripts": {
     "dev": "next dev --turbo",
@@ -87,11 +87,11 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "*",
-    "@playwright/test": "^1.62.0",
+    "@playwright/test": "*",
     "@tailwindcss/typography": "*",
     "@testing-library/jest-dom": "*",
     "@testing-library/react": "*",
-    "@types/jest": "^30.0.0",
+    "@types/jest": "*",
     "@types/node": "*",
     "@types/pdf-parse": "*",
     "@types/react": "*",

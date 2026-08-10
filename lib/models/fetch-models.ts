@@ -10,7 +10,7 @@ export const fetchHostedModels = async () => {
   try {
     // Per ARCHITECTURE.md: Capabilities determine available models
     // Control plane advertises which models are available
-    const response = await fetch("/api/v1/capabilities")
+    const response = await fetch("/api/v1/discovery/capabilities")
 
     if (!response.ok) {
       throw new Error(`Server is not responding.`)
