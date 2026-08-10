@@ -302,25 +302,27 @@ export const useChatHandler = () => {
       // Show the user's own message immediately. Research runs for many minutes, and
       // without this the screen stays completely empty the whole time, which is
       // indistinguishable from the app being broken.
-      setChatMessages(prev => [
-        ...prev,
-        {
-          message: {
-            chat_id: selectedChat?.id || "",
-            assistant_id: null,
-            content: messageContent,
-            created_at: new Date().toISOString(),
-            id: `msg_user_${Date.now()}`,
-            image_paths: [],
-            model: chatSettings?.model || "",
-            role: "user",
-            sequence_number: prev.length,
-            updated_at: new Date().toISOString(),
-            user_id: ""
-          },
-          fileItems: []
-        }
-      ])
+      if (!isRegeneration) {
+        setChatMessages(prev => [
+          ...prev,
+          {
+            message: {
+              chat_id: selectedChat?.id || "",
+              assistant_id: null,
+              content: messageContent,
+              created_at: new Date().toISOString(),
+              id: `msg_user_${Date.now()}`,
+              image_paths: [],
+              model: chatSettings?.model || "",
+              role: "user",
+              sequence_number: prev.length,
+              updated_at: new Date().toISOString(),
+              user_id: ""
+            },
+            fileItems: []
+          }
+        ])
+      }
 
       const newAbortController = new AbortController()
       setAbortController(newAbortController)
@@ -445,7 +447,8 @@ export const useChatHandler = () => {
                 const status = (eventData.status as string) || ""
                 if (status) setToolInUse(status)
               } else if (eventType === "workflow_note_added") {
-                const note = (eventData.message as string) || ""
+                const note =
+                  (eventData.note as string) || (eventData.message as string) || ""
                 if (note) {
                   setToolInUse(note)
                   progressNotes += `\n\n${note}`
