@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getEvents } from "@/lib/execution-event-store"
 
-const KEEPALIVE_MS = 15_000
+const KEEPALIVE_MS = 3_000  // must be < client-side 5 s SSE read timeout
 const INACTIVITY_MS = 30_000 // control plane may be silent for 10s+ between events
 const POLL_INTERVAL_MS = 2_000
 const POLL_DEADLINE_MS = 5 * 60 * 1_000 // 5 min, counted from fallback start

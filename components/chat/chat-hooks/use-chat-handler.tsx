@@ -206,7 +206,7 @@ export const useChatHandler = () => {
   const pollExecutionResult = async (
     executionId: string,
     abortSignal: AbortSignal,
-    maxAttempts = 60,
+    maxAttempts = 180, // 180 × 5 s = 15 min — deep research can take 10+ min
     intervalMs = 5000
   ): Promise<string | null> => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -402,7 +402,7 @@ export const useChatHandler = () => {
             }>((_, reject) => {
               timeoutId = setTimeout(
                 () => reject(new DOMException("SSE timeout", "TimeoutError")),
-                5000
+                20_000 // > proxy keepalive interval (3 s); < Next.js read timeout
               )
             })
 
