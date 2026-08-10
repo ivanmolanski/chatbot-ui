@@ -110,16 +110,18 @@ export const useChatHandler = () => {
     const root = result as Record<string, any>
     const pkg = root.research_package ?? root
     if (!pkg || typeof pkg !== "object") return JSON.stringify(result, null, 2)
+    const doc =
+      pkg.document && typeof pkg.document === "object" ? pkg.document : pkg
 
     const parts: string[] = []
 
-    if (pkg.document_title) parts.push(`# ${pkg.document_title}`)
-    if (pkg.executive_summary) {
-      parts.push(`## Executive summary\n\n${pkg.executive_summary}`)
+    if (doc.document_title) parts.push(`# ${doc.document_title}`)
+    if (doc.executive_summary) {
+      parts.push(`## Executive summary\n\n${doc.executive_summary}`)
     }
 
-    if (Array.isArray(pkg.sections)) {
-      for (const section of pkg.sections) {
+    if (Array.isArray(doc.sections)) {
+      for (const section of doc.sections) {
         if (typeof section === "string") {
           parts.push(section)
         } else if (section && typeof section === "object") {
@@ -129,19 +131,21 @@ export const useChatHandler = () => {
       }
     }
 
-    if (Array.isArray(pkg.source_notes) && pkg.source_notes.length > 0) {
-      const sources = pkg.source_notes
+    if (Array.isArray(doc.source_notes) && doc.source_notes.length > 0) {
+      const sources = doc.source_notes
         .map((note: any, index: number) => {
           const id = note?.citation_id ?? index + 1
           const title = note?.title ?? note?.url ?? "Untitled source"
+          const linkedTitle =
+            note?.url && title ? `[${title}](${note.url})` : title
           const domain = note?.domain ? ` — ${note.domain}` : ""
-          return `${id}. ${title}${domain}`
+          return `${id}. ${linkedTitle}${domain}`
         })
         .join("\n")
       parts.push(`## Sources\n\n${sources}`)
     }
 
-    const metadata = root.metadata ?? pkg.metadata
+    const metadata = root.metadata ?? pkg.metadata ?? doc.metadata
     if (metadata?.final_quality_score !== undefined) {
       parts.push(`_Quality score: ${metadata.final_quality_score}_`)
     }
