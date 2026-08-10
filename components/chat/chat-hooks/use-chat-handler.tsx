@@ -225,13 +225,13 @@ export const useChatHandler = () => {
               return renderResearchResult(data.result)
             }
             if (data.document?.sections) {
-              return data.document.sections.join("\n\n")
+              return renderResearchResult(data.document)
             }
             if (data.execution?.result) {
               return renderResearchResult(data.execution.result)
             }
             if (data.execution?.document?.sections) {
-              return data.execution.document.sections.join("\n\n")
+              return renderResearchResult(data.execution.document)
             }
             return "Research completed but no result content found."
           }
@@ -482,7 +482,12 @@ export const useChatHandler = () => {
                       responseText = renderResearchResult(execData.result)
                       fetchedResult = true
                     } else if (execData.document?.sections) {
-                      responseText = execData.document.sections.join("\n\n")
+                      responseText = renderResearchResult(execData.document)
+                      fetchedResult = true
+                    } else if (execData.execution?.document?.sections) {
+                      responseText = renderResearchResult(
+                        execData.execution.document
+                      )
                       fetchedResult = true
                     } else if (execData.execution?.result) {
                       responseText = renderResearchResult(
