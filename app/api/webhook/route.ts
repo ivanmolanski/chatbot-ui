@@ -125,16 +125,25 @@ export async function POST(request: NextRequest) {
       const executionId = extractExecutionId(event)
 
       if (executionId) {
+        // Transform execution_updated with status into workflow_note_added for chat UI progress
+        let eventType = event.type || event.event_type || "unknown"
+        let eventData = event.data || event
+        let note = null
+        if (eventType === "execution_updated" && eventData.status) {
+          eventType = "workflow_note_added"
+          note = eventData.status
+        }
+
         const storedEvent: Omit<StoredEvent, "receivedAt"> = {
           id:
             event.id && event.id !== executionId
               ? event.id
               : `evt_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-          type: event.type || event.event_type || "unknown",
+          type: eventType,
           source: event.source || event.event_source || "control-plane",
           time:
             event.time || event.timestamp || new Date().toISOString(),
-          data: event.data || event,
+          data: note ? { ...eventData, note } : (event.data || event),
           executionId
         }
         storeEvent(storedEvent)
