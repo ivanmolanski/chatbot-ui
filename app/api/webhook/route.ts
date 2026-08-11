@@ -68,6 +68,32 @@ export function verifyApiKey(request: NextRequest): boolean {
   return passed
 }
 
+/**
+ * Extract an execution ID from an event (CloudEvent or AgentField wire format),
+ * checking top-level, nested data, and "exec_"-prefixed ids.
+ */
+function extractExecutionId(event: Record<string, any>): string | undefined {
+  const candidates = [
+    event.executionId,
+    event.execution_id,
+    event.data?.execution_id,
+    event.data?.executionId,
+    event.data?.run_id,
+    event.data?.workflow_id,
+    event.data?.execution?.id,
+    event.data?.run?.id,
+    event.data?.workflow?.id
+  ]
+  for (const c of candidates) {
+    if (typeof c === "string" && c.length > 0) return c
+  }
+  // Fallback: some events carry an id like "exec_abc123"
+  if (typeof event.id === "string" && event.id.startsWith("exec_")) {
+    return event.id
+  }
+  return undefined
+}
+
 export async function POST(request: NextRequest) {
   // Validate caller with API key (same mechanism as execution events route)
   if (!verifyApiKey(request)) {
@@ -80,32 +106,53 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    // Log the incoming webhook for debugging
-    console.log("[Webhook] Received event:", JSON.stringify(body, null, 2))
+    // The control plane sends BATCHED payloads:
+    //   { batch_id, event_count, events: [ { event_type, event_source, timestamp, data }, ... ] }
+    // Each event in the batch may itself look like a CloudEvent with type/source/time/data.
+    // Normalize to a flat array BEFORE processing — previously the whole batch was treated
+    // as a single event, so every execution_created/execution_completed event was skipped
+    // with "Event missing execution ID" and SSE clients never saw progress.
+    let rawEvents: unknown[]
+    if (body && typeof body === "object" && Array.isArray((body as any).events)) {
+      rawEvents = (body as any).events
+    } else if (Array.isArray(body)) {
+      rawEvents = body
+    } else {
+      rawEvents = [body]
+    }
 
-    // The control plane sends CloudEvents format
-    // We need to extract execution_id and store for SSE clients
-    const events = Array.isArray(body) ? body : [body]
+    console.log(
+      `[Webhook] Received batch: ${rawEvents.length} event(s)`
+    )
+
+    const events: Record<string, any>[] = rawEvents.map((ev: any) => {
+      if (ev && typeof ev === "object" && ev.event_type) {
+        // AgentField wire format: { event_type, event_source, timestamp, data }
+        return {
+          ...ev,
+          type: ev.event_type,
+          source: ev.event_source || ev.source || "control-plane",
+          time: ev.timestamp || ev.time || new Date().toISOString()
+        }
+      }
+      return ev
+    })
 
     for (const event of events) {
-      // Extract execution ID from various possible locations
-      // Order: top-level executionId (camelCase), execution_id (snake_case), then nested data fields
-      const executionId =
-        event.executionId ||
-        event.execution_id ||
-        event.data?.execution_id ||
-        event.data?.executionId ||
-        event.data?.run_id ||
-        event.data?.workflow_id
+      // Extract execution ID from every plausible location:
+      // top-level, nested data, and the AgentField event payload itself.
+      const executionId = extractExecutionId(event)
 
       if (executionId) {
         const storedEvent: Omit<StoredEvent, "receivedAt"> = {
           id:
-            event.id ||
-            `evt_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-          type: event.type || "unknown",
-          source: event.source || "control-plane",
-          time: event.time || new Date().toISOString(),
+            event.id && event.id !== executionId
+              ? event.id
+              : `evt_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          type: event.type || event.event_type || "unknown",
+          source: event.source || event.event_source || "control-plane",
+          time:
+            event.time || event.timestamp || new Date().toISOString(),
           data: event.data || event,
           executionId
         }
@@ -114,15 +161,20 @@ export async function POST(request: NextRequest) {
           `[Webhook] Stored event ${storedEvent.type} for execution ${executionId}`
         )
       } else {
-        console.warn(
-          "[Webhook] Event missing execution ID, skipping:",
-          event.type
+        // system_state_snapshot and other node/system events don't carry an execution id.
+        // Log at debug level only — they are expected, not an error.
+        console.log(
+          `[Webhook] Skipping non-execution event (no execution ID): ${event.type || event.event_type || "unknown"}`
         )
       }
     }
 
     // Respond quickly to avoid "context deadline exceeded"
-    return NextResponse.json({ success: true, received: events.length })
+    return NextResponse.json({
+      success: true,
+      received: events.length,
+      stored: events.filter((e) => !!extractExecutionId(e)).length
+    })
   } catch (error) {
     console.error("[Webhook] Error processing webhook:", error)
     return NextResponse.json(

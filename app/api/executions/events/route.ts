@@ -236,10 +236,15 @@ export async function GET(request: NextRequest) {
         }
 
         if (
-          newEvents.some(
-            e =>
-              e.type === "execution.completed" || e.type === "execution.failed"
-          )
+          newEvents.some(e => {
+            const t = e.type
+            return (
+              t === "execution.completed" ||
+              t === "execution.failed" ||
+              t === "execution_completed" ||
+              t === "execution_failed"
+            )
+          })
         )
           break
 

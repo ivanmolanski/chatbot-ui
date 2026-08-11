@@ -87,11 +87,11 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "*",
-    "@playwright/test": "1.62.1",
+    "@playwright/test": "*",
     "@tailwindcss/typography": "*",
     "@testing-library/jest-dom": "*",
     "@testing-library/react": "*",
-    "@types/jest": "30.0.0",
+    "@types/jest": "*",
     "@types/node": "*",
     "@types/pdf-parse": "*",
     "@types/react": "*",
