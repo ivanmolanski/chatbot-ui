@@ -33,39 +33,20 @@ export function verifyApiKey(request: NextRequest): boolean {
   // Also check query parameter (for webhook URL with api_key param)
   const queryKey = request.nextUrl.searchParams.get("api_key")
 
-  // DEBUG: Log all auth-related info
-  console.log("[Webhook Auth] DEBUG:", {
-    hasApiKey: !!API_KEY,
-    apiKeyLength: API_KEY.length,
-    xApiKey: xApiKey ? `${xApiKey.substring(0, 4)}...` : null,
-    authHeader: authHeader ? `${authHeader.substring(0, 20)}...` : null,
-    queryKey: queryKey ? `${queryKey.substring(0, 4)}...` : null,
-    url: request.nextUrl.toString(),
-    allHeaders: Object.fromEntries(request.headers.entries())
-  })
-
   const keyToCheck = providedKey || queryKey
   if (!keyToCheck) {
-    console.log("[Webhook Auth] No key provided in headers or query params")
     return false
   }
 
   // Constant-time comparison to prevent timing attacks
   if (keyToCheck.length !== API_KEY.length) {
-    console.log(
-      `[Webhook Auth] Key length mismatch: provided=${keyToCheck.length}, expected=${API_KEY.length}`
-    )
     return false
   }
   let result = 0
   for (let i = 0; i < keyToCheck.length; i++) {
     result |= keyToCheck.charCodeAt(i) ^ API_KEY.charCodeAt(i)
   }
-  const passed = result === 0
-  if (!passed) {
-    console.log("[Webhook Auth] Key comparison failed (constant-time)")
-  }
-  return passed
+  return result === 0
 }
 
 /**
@@ -158,14 +139,12 @@ export async function POST(request: NextRequest) {
         }
         storeEvent(storedEvent)
         console.log(
-          `[Webhook] Stored event ${storedEvent.type} for execution ${executionId}`
+          `[Webhook] Stored ${storedEvent.type} for ${executionId}`
         )
       } else {
-        // system_state_snapshot and other node/system events don't carry an execution id.
-        // Log at debug level only — they are expected, not an error.
-        console.log(
-          `[Webhook] Skipping non-execution event (no execution ID): ${event.type || event.event_type || "unknown"}`
-        )
+        // system_state_snapshot and other node/system events don't carry an
+        // execution id and are expected periodically — no per-event logging
+        // to avoid flooding the log pipeline at >500 logs/sec.
       }
     }
 
