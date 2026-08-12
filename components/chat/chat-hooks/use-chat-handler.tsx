@@ -206,8 +206,8 @@ export const useChatHandler = () => {
   const pollExecutionResult = async (
     executionId: string,
     abortSignal: AbortSignal,
-    maxAttempts = 180, // 180 × 5 s = 15 min — deep research can take 10+ min
-    intervalMs = 5000
+    maxAttempts = 600, // 600 × 2 s = 20 min — matches documented chat handler polling deadline
+    intervalMs = 2000
   ): Promise<string | null> => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       if (abortSignal.aborted) {
@@ -391,9 +391,20 @@ export const useChatHandler = () => {
       if (sseResponse.body) {
         const reader = sseResponse.body.getReader()
         const decoder = new TextDecoder()
+        // Hard ceiling on the SSE streaming phase. The control plane's notes
+        // stream (notes/events) emits workflow_note_added + keepalive pings for
+        // the whole research run but never an execution_completed event.
+        // After streaming progress up to this deadline, hand off to the polling
+        // fallback (pollExecutionResult) which checks /executions/{id} and
+        // reliably detects completion/failure. 8 min of live notes is plenty of
+        // live feedback before we switch to status polling.
+        const sseDeadline = Date.now() + 8 * 60 * 1000
 
         try {
-          while (!newAbortController.signal.aborted) {
+          while (
+            !newAbortController.signal.aborted &&
+            Date.now() < sseDeadline
+          ) {
             const readPromise = reader.read()
             let timeoutId: ReturnType<typeof setTimeout> | undefined
             const timeoutPromise = new Promise<{
@@ -451,8 +462,19 @@ export const useChatHandler = () => {
                 const status = (eventData.status as string) || ""
                 if (status) setToolInUse(status)
               } else if (eventType === "workflow_note_added") {
+                // Control plane sends note text at data.note.message where data.note
+                // is an object { message, tags }. Extract message; fall back to
+                // eventData.message / eventData.note as string for other shapes.
+                const rawNote = eventData.note
+                const message =
+                  rawNote && typeof rawNote === "object"
+                    ? (rawNote as any).message
+                    : undefined
                 const note =
-                  (eventData.note as string) || (eventData.message as string) || ""
+                  (message as string) ||
+                  (eventData.note as string) ||
+                  (eventData.message as string) ||
+                  ""
                 if (note) {
                   setToolInUse(note)
                   progressNotes += `\n\n${note}`
