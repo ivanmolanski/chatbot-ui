@@ -27,7 +27,7 @@
 ### 2.1 Three-Layer Proxy (Next.js App Router)
 
 ```
-chatbot-ui (Next.js 16.2.11, Node 20.11.0)
+chatbot-ui (Next.js 16.x latest, Node 22) — package.json uses `"next": "*"` and `.nvmrc` is `26.7.0`
 ├── app/api/v1/[...slug]/route.ts          # Generic proxy → control plane /api/v1/*
 ├── app/api/executions/events/route.ts     # SSE proxy with fallback → /api/ui/v1/workflows/{id}/notes/events
 └── app/api/webhook/route.ts               # Webhook receiver (control plane → event store)
@@ -389,7 +389,7 @@ const result = await resultRes.json()
 - `NEXT_PUBLIC_APP_URL` = chatbot UI URL
 
 **Build**: `npm run build --turbo` (Turbopack)
-**Runtime**: Node.js 20.11.0 (`.nvmrc`)
+**Runtime**: Node.js 22 (`.nvmrc`)
 
 ---
 
