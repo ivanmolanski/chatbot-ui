@@ -23,8 +23,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy manifest first for better layer caching
 COPY package.json package-lock.json ./
 
-# Install dependencies (lockfile present → reproducible install)
-RUN npm ci
+# Install dependencies (lockfile present → reproducible install).
+# NODE_ENV is production above; npm ci would then skip devDependencies, but
+# next.config.js requires @next/bundle-analyzer (a devDependency) at load time,
+# and `next build` also needs TS/ESLint tooling. Install everything, then prune
+# devDependencies for the slim production image.
+RUN npm ci --include=dev
 
 # Copy application source
 COPY . .
