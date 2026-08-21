@@ -206,8 +206,11 @@ export const useChatHandler = () => {
   const pollExecutionResult = async (
     executionId: string,
     abortSignal: AbortSignal,
-    maxAttempts = 600, // 600 × 2 s = 20 min — matches documented chat handler polling deadline
-    intervalMs = 2000
+    // 2400 × 5 s = 200 min. Observed production runs take 45-50 min (simple
+    // queries included); the previous 20-min budget aborted runs that were
+    // still making progress. 5 s interval keeps status checks light.
+    maxAttempts = 2400,
+    intervalMs = 5000
   ): Promise<string | null> => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       if (abortSignal.aborted) {
@@ -396,9 +399,9 @@ export const useChatHandler = () => {
         // the whole research run but never an execution_completed event.
         // After streaming progress up to this deadline, hand off to the polling
         // fallback (pollExecutionResult) which checks /executions/{id} and
-        // reliably detects completion/failure. 8 min of live notes is plenty of
-        // live feedback before we switch to status polling.
-        const sseDeadline = Date.now() + 8 * 60 * 1000
+        // reliably detects completion/failure. 45 min of live notes covers the
+        // observed 45-50 min production runs end to end.
+        const sseDeadline = Date.now() + 45 * 60 * 1000
 
         try {
           while (
