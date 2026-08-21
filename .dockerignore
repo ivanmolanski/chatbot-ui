@@ -4,6 +4,7 @@ node_modules
 .github
 __tests__
 playwright-test
+!__tests__/playwright-test/package.json
 *.md
 .DS_Store
 .env*.local
